@@ -73,7 +73,7 @@
         {% for t in recent_transfers %}
         <tr>
           <td class="mono">{{ t['Transfer_Date'] }}</td>
-          <td>{{ t['Evidence_Desc'][:40] }}{% if t['Evidence_Desc']|length > 40 %}…{% endif %}</td>
+          <td>{{ t['Description'][:40] }}{% if t['Description']|length > 40 %}…{% endif %}</td>
           <td><span class="seal">{{ t['Tamper_Seal'] }}</span></td>
           <td class="dim">{{ t['From_Off'] }}</td>
           <td class="dim">{{ t['To_Off'] }}</td>
