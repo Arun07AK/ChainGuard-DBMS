@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}— Court Requisitions{% endblock %}
+{% block page_title %}Court Requisitions{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="card-header">Court Requisitions ({{ requisitions|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>ID</th><th>Evidence</th><th>Case</th><th>Court</th>
+        <th>Hearing Date</th><th>Requested By</th><th>Requested On</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        {% for r in requisitions %}
+        <tr>
+          <td class="mono dim">{{ r['Requisition_ID'] }}</td>
+          <td>
+            <a href="{{ url_for('evidence_detail', ev_id=r['Evidence_ID']) }}" class="seal">{{ r['Tamper_Seal'] }}</a>
+            <div class="dim" style="font-size:11px;margin-top:1px">{{ r['Evidence_Desc'][:40] }}{% if r['Evidence_Desc']|length > 40 %}…{% endif %}</div>
+          </td>
+          <td><span class="mono dim">{{ r['FIR_Number'] }}</span><div class="dim" style="font-size:11px">{{ r['Crime_Type'] }}</div></td>
+          <td style="font-size:12px;max-width:140px">{{ r['Court_Name'] }}</td>
+          <td class="mono" style="color:var(--yellow)">{{ r['Hearing_Date'] }}</td>
+          <td class="dim" style="font-size:12px">{{ r['Requested_By'] }}</td>
+          <td class="mono dim">{{ r['Request_Date'] }}</td>
+          <td>
+            {% set s=r['Status'] %}
+            {% if s=='APPROVED' %}<span class="badge badge-approved">APPROVED</span>
+            {% elif s=='PENDING' %}<span class="badge badge-pending">PENDING</span>
+            {% elif s=='RETURNED' %}<span class="badge badge-returned">RETURNED</span>
+            {% else %}<span class="badge badge-rejected">REJECTED</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

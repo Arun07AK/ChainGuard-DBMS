@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}— Evidence{% endblock %}
+{% block page_title %}Evidence Registry{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">
+  <a href="{{ url_for('evidence_list') }}" class="badge {% if not selected_cat %}badge-investigation{% else %}badge-closed{% endif %}" style="padding:5px 10px;cursor:pointer">ALL</a>
+  {% for cat in categories %}
+  <a href="{{ url_for('evidence_list', category=cat) }}" class="badge {% if selected_cat==cat %}badge-investigation{% else %}badge-closed{% endif %}" style="padding:5px 10px;cursor:pointer">{{ cat }}</a>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <div class="card-header">Evidence Items ({{ evidence|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>ID</th><th>Description</th><th>Category</th><th>Case</th>
+        <th>Condition</th><th>Custodian</th><th>Tamper Seal</th><th></th>
+      </tr></thead>
+      <tbody>
+        {% for e in evidence %}
+        <tr>
+          <td class="mono">#{{ e['Evidence_ID'] }}</td>
+          <td style="max-width:200px">{{ e['Description'][:55] }}{% if e['Description']|length > 55 %}…{% endif %}</td>
+          <td><span class="cat-{{ e['Category']|lower }}" style="font-size:12px;font-weight:600">{{ e['Category'] }}</span></td>
+          <td><a href="{{ url_for('case_detail', case_id=e['Case_ID']) }}" class="mono">{{ e['FIR_Number'] }}</a></td>
+          <td>
+            {% set cond=e['Condition'] %}
+            {% if cond=='INTACT' %}<span class="badge badge-intact">INTACT</span>
+            {% elif cond=='DAMAGED' %}<span class="badge badge-damaged">DAMAGED</span>
+            {% else %}<span class="badge badge-cancelled">{{ cond }}</span>{% endif %}
+          </td>
+          <td class="dim">{{ e['Custodian_Name'] }}<br><span class="mono">{{ e['Badge_Number'] }}</span></td>
+          <td><span class="seal">{{ e['Tamper_Seal'] }}</span></td>
+          <td><a href="{{ url_for('evidence_detail', ev_id=e['Evidence_ID']) }}">Chain →</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

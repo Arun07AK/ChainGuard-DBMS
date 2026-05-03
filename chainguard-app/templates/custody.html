@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}— Custody Chain{% endblock %}
+{% block page_title %}Custody Chain{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="card-header">All Custody Transfers ({{ transfers|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th><th>Date</th><th>Evidence</th><th>Case</th>
+        <th>From</th><th>To</th><th>Reason</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        {% for t in transfers %}
+        <tr>
+          <td class="mono dim">{{ t['Transfer_ID'] }}</td>
+          <td class="mono dim">{{ t['Transfer_Date'] }}</td>
+          <td>
+            <a href="{{ url_for('evidence_detail', ev_id=t['Evidence_ID']) }}" class="seal">{{ t['Tamper_Seal'] }}</a>
+            <div class="dim" style="font-size:11px;margin-top:1px">{{ t['Evidence_Desc'][:40] }}{% if t['Evidence_Desc']|length > 40 %}…{% endif %}</div>
+          </td>
+          <td><span class="mono dim">{{ t['FIR_Number'] }}</span></td>
+          <td class="dim" style="font-size:12px">{{ t['From_Off'] }}</td>
+          <td style="font-size:12px;font-weight:500">{{ t['To_Off'] }}</td>
+          <td class="dim" style="font-size:11px;max-width:160px">{{ t['Reason'][:50] }}{% if t['Reason']|length > 50 %}…{% endif %}</td>
+          <td>
+            <span class="badge badge-{{ t['Status']|lower }}">{{ t['Status'] }}</span>
+            {% if t['Is_Sealed']=='Y' %}<span class="badge badge-sealed" style="margin-left:3px">⬡</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

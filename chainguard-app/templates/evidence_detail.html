@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}— Evidence #{{ ev['Evidence_ID'] }}{% endblock %}
+{% block page_title %}Evidence · {{ ev['Tamper_Seal'] }}{% endblock %}
+{% block content %}
+
+<div class="grid-2" style="margin-bottom:16px">
+  <div class="card">
+    <div class="card-header">Evidence Details</div>
+    <table style="font-size:13px">
+      <tr><td class="dim" style="padding:5px 0;width:130px">Evidence ID</td><td class="mono">#{{ ev['Evidence_ID'] }}</td></tr>
+      <tr><td class="dim" style="padding:5px 0">Tamper Seal</td><td><span class="seal" style="font-size:13px">{{ ev['Tamper_Seal'] }}</span></td></tr>
+      <tr><td class="dim" style="padding:5px 0">Description</td><td style="font-weight:500">{{ ev['Description'] }}</td></tr>
+      <tr><td class="dim" style="padding:5px 0">Category</td><td><span class="cat-{{ ev['Category']|lower }}" style="font-weight:600">{{ ev['Category'] }}</span></td></tr>
+      <tr><td class="dim" style="padding:5px 0">Condition</td>
+        <td>{% set cond=ev['Condition'] %}
+          {% if cond=='INTACT' %}<span class="badge badge-intact">INTACT</span>
+          {% elif cond=='DAMAGED' %}<span class="badge badge-damaged">DAMAGED</span>
+          {% else %}<span class="badge badge-cancelled">{{ cond }}</span>{% endif %}
+        </td>
+      </tr>
+      <tr><td class="dim" style="padding:5px 0">Date Collected</td><td class="mono">{{ ev['Date_Collected'] }}</td></tr>
+      <tr><td class="dim" style="padding:5px 0">Current Location</td><td>{{ ev['Current_Location'] }}</td></tr>
+      <tr><td class="dim" style="padding:5px 0">Custodian</td><td>{{ ev['Custodian_Name'] }}<br><span class="mono dim">{{ ev['Badge_Number'] }}</span></td></tr>
+      <tr><td class="dim" style="padding:5px 0">Storage</td><td class="dim">{{ ev['Facility_Name'] or '—' }}</td></tr>
+      <tr><td class="dim" style="padding:5px 0">Case</td><td><a href="{{ url_for('case_detail', case_id=ev['Case_ID']) }}" class="seal">{{ ev['FIR_Number'] }}</a> · {{ ev['Crime_Type'] }}</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Chain Integrity</div>
+    <div style="padding:16px 0">
+      {% if chain_status == 'INTACT' %}
+      <div class="chain-intact" style="font-size:16px">
+        <span style="font-size:22px">✓</span> {{ chain_status }}
+      </div>
+      <div class="dim" style="margin-top:8px;font-size:12px">All {{ transfers|length }} custody records verified. No gaps detected.</div>
+      {% else %}
+      <div class="chain-broken" style="font-size:14px">
+        <span style="font-size:20px">✗</span> {{ chain_status }}
+      </div>
+      {% endif %}
+    </div>
+    {% if analyses %}
+    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+      <div class="card-header" style="margin-bottom:8px">Lab Analyses</div>
+      {% for a in analyses %}
+      <div style="margin-bottom:8px;padding:8px;background:var(--surface);border-radius:4px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12px;font-weight:500">{{ a['Lab_Name'] }}</span>
+          <span class="badge badge-{{ a['Status']|lower|replace('_','-') }}">{{ a['Status'] }}</span>
+        </div>
+        <div class="dim" style="font-size:11px;margin-top:3px">{{ a['Analyst_Name'] }} · {{ a['Start_Date'] }}{% if a['End_Date'] %} → {{ a['End_Date'] }}{% endif %} ({{ a['Days_In_Lab'] }}d)</div>
+        {% if a['Findings'] %}
+        <div style="margin-top:6px;font-size:12px;color:var(--text)">{{ a['Findings'][:120] }}{% if a['Findings']|length > 120 %}…{% endif %}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Custody Chain ({{ transfers|length }} records)</div>
+  <div class="timeline" style="padding-top:8px">
+    {% for t in transfers %}
+    <div class="tl-item">
+      <div class="tl-dot {% if t['Is_Sealed']=='Y' %}sealed{% elif t['Status']=='PENDING' %}pending{% endif %}"></div>
+      <div class="tl-body">
+        <div class="tl-header">
+          <div>
+            <span class="tl-date">{{ t['Transfer_Date'] }}</span>
+            <span class="dim" style="margin-left:8px">·</span>
+            <span class="dim" style="margin-left:8px;font-size:11px">{{ t['Location'] }}</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span class="badge badge-{{ t['Status']|lower }}">{{ t['Status'] }}</span>
+            {% if t['Is_Sealed']=='Y' %}<span class="badge badge-sealed">SEALED</span>{% endif %}
+            {% set cond=t['Evidence_Condition'] %}
+            {% if cond=='INTACT' %}<span class="badge badge-intact">{{ cond }}</span>
+            {% elif cond=='DAMAGED' %}<span class="badge badge-damaged">{{ cond }}</span>
+            {% else %}<span class="badge badge-cancelled">{{ cond }}</span>{% endif %}
+          </div>
+        </div>
+        <div class="tl-officers">
+          <span style="color:var(--muted)">{{ t['From_Off'] }}</span>
+          <span style="color:var(--accent);margin:0 6px">→</span>
+          <span style="font-weight:500">{{ t['To_Off'] }}</span>
+          <span class="mono dim" style="margin-left:8px;font-size:10px">{{ t['From_Badge'] }} → {{ t['To_Badge'] }}</span>
+        </div>
+        <div class="tl-reason">{{ t['Reason'] }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div style="margin-top:12px">
+  <a href="{{ url_for('evidence_list') }}" style="color:var(--muted);font-size:13px">← Back to Evidence</a>
+</div>
+
+{% endblock %}

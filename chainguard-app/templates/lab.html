@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}— Lab Analysis{% endblock %}
+{% block page_title %}Lab Analysis{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="card-header">Lab Analysis Records ({{ analyses|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>ID</th><th>Evidence</th><th>Lab</th><th>Analyst</th>
+        <th>Start</th><th>End</th><th>Days</th><th>Status</th><th>Findings</th>
+      </tr></thead>
+      <tbody>
+        {% for a in analyses %}
+        <tr>
+          <td class="mono dim">{{ a['Analysis_ID'] }}</td>
+          <td>
+            <a href="{{ url_for('evidence_detail', ev_id=a['Evidence_ID']) }}" class="seal">{{ a['Tamper_Seal'] }}</a>
+            <div class="dim" style="font-size:11px;margin-top:1px">{{ a['Evidence_Desc'][:35] }}{% if a['Evidence_Desc']|length > 35 %}…{% endif %}</div>
+          </td>
+          <td class="dim" style="font-size:12px">{{ a['Lab_Name'] }}</td>
+          <td class="dim" style="font-size:12px">{{ a['Analyst_Name'] }}</td>
+          <td class="mono dim">{{ a['Start_Date'] }}</td>
+          <td class="mono dim">{{ a['End_Date'] or '—' }}</td>
+          <td class="mono" style="color:{% if a['Days_In_Lab'] > 30 %}var(--red){% elif a['Days_In_Lab'] > 14 %}var(--orange){% else %}var(--green){% endif %}">{{ a['Days_In_Lab'] }}</td>
+          <td>
+            {% set s=a['Status'] %}
+            {% if s=='COMPLETED' %}<span class="badge badge-completed">DONE</span>
+            {% elif s=='IN_PROGRESS' %}<span class="badge badge-in-progress">IN PROGRESS</span>
+            {% else %}<span class="badge badge-pending">PENDING</span>{% endif %}
+          </td>
+          <td style="font-size:11px;color:var(--muted);max-width:180px">{{ (a['Findings'] or '—')[:80] }}{% if a['Findings'] and a['Findings']|length > 80 %}…{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

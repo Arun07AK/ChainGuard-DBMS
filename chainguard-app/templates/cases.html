@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}— Cases{% endblock %}
+{% block page_title %}Cases{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="card-header">All Cases ({{ cases|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Case ID</th><th>FIR Number</th><th>Crime Type</th><th>Date Reported</th>
+        <th>Status</th><th>Investigating Officer</th><th>Evidence</th><th></th>
+      </tr></thead>
+      <tbody>
+        {% for c in cases %}
+        <tr>
+          <td class="mono">#{{ c['Case_ID'] }}</td>
+          <td><span class="seal">{{ c['FIR_Number'] }}</span></td>
+          <td style="font-weight:500">{{ c['Crime_Type'] }}</td>
+          <td class="mono dim">{{ c['Date_Reported'] }}</td>
+          <td>
+            {% set s = c['Status'] %}
+            {% if s == 'OPEN' %}<span class="badge badge-open">OPEN</span>
+            {% elif s == 'CLOSED' %}<span class="badge badge-closed">CLOSED</span>
+            {% elif s == 'UNDER_INVESTIGATION' %}<span class="badge badge-investigation">INVESTIGATING</span>
+            {% else %}<span class="badge badge-archived">ARCHIVED</span>{% endif %}
+          </td>
+          <td class="dim">{{ c['Officer_Name'] }}</td>
+          <td class="mono" style="color:var(--accent)">{{ c['Evidence_Count'] }}</td>
+          <td><a href="{{ url_for('case_detail', case_id=c['Case_ID']) }}">View →</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}— Audit Log{% endblock %}
+{% block page_title %}Audit Log{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="card-header">Audit Log ({{ logs|length }} entries)</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Log ID</th><th>Timestamp</th><th>Table</th><th>Operation</th>
+        <th>Record</th><th>Officer</th><th>Old Value</th><th>New Value</th><th>Note</th>
+      </tr></thead>
+      <tbody>
+        {% for l in logs %}
+        <tr>
+          <td class="mono dim">{{ l['Log_ID'] }}</td>
+          <td class="mono dim" style="white-space:nowrap">{{ l['Action_Timestamp'] }}</td>
+          <td><span class="badge badge-closed">{{ l['Table_Name'] }}</span></td>
+          <td>
+            {% set op=l['Operation'] %}
+            {% if op=='INSERT' %}<span class="badge badge-open">INSERT</span>
+            {% elif op=='UPDATE' %}<span class="badge badge-pending">UPDATE</span>
+            {% else %}<span class="badge badge-rejected">DELETE</span>{% endif %}
+          </td>
+          <td class="mono dim">#{{ l['Record_ID'] }}</td>
+          <td class="dim" style="font-size:12px">{{ l['Officer_Name'] or '—' }}</td>
+          <td style="font-size:11px;color:var(--muted);max-width:120px">{{ l['Old_Value'] or '—' }}</td>
+          <td style="font-size:11px;color:var(--text);max-width:120px">{{ (l['New_Value'] or '—')[:60] }}{% if l['New_Value'] and l['New_Value']|length > 60 %}…{% endif %}</td>
+          <td style="font-size:11px;color:{% if l['IP_Note'] and 'TAMPER' in l['IP_Note'] %}var(--red){% else %}var(--muted){% endif %}">{{ l['IP_Note'] or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

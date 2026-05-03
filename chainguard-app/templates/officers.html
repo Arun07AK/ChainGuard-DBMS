@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}— Officers{% endblock %}
+{% block page_title %}Officers{% endblock %}
+{% block content %}
+
+<div class="card">
+  <div class="card-header">Officers ({{ officers|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>ID</th><th>Name</th><th>Badge</th><th>Rank</th><th>Department</th>
+        <th>Authorization</th><th>Evidence Held</th><th>Transfers</th><th>Contact</th>
+      </tr></thead>
+      <tbody>
+        {% for o in officers %}
+        <tr>
+          <td class="mono dim">{{ o['Officer_ID'] }}</td>
+          <td style="font-weight:500">{{ o['Name'] }}</td>
+          <td><span class="seal">{{ o['Badge_Number'] }}</span></td>
+          <td class="dim">{{ o['Rank'] }}</td>
+          <td class="dim" style="font-size:12px">{{ o['Department'] }}</td>
+          <td>
+            {% set lvl=o['Authorization_Level'] %}
+            {% if lvl=='ADMIN' %}<span class="badge badge-investigation">ADMIN</span>
+            {% elif lvl=='SUPERVISOR' %}<span class="badge badge-open">SUPERVISOR</span>
+            {% elif lvl=='ANALYST' %}<span class="badge" style="background:rgba(179,136,255,.12);color:var(--purple);border:1px solid rgba(179,136,255,.25)">ANALYST</span>
+            {% else %}<span class="badge badge-closed">OFFICER</span>{% endif %}
+          </td>
+          <td class="mono" style="color:var(--accent);text-align:center">{{ o['Evidence_Held'] }}</td>
+          <td class="mono dim" style="text-align:center">{{ o['Transfers_Made'] }}</td>
+          <td class="dim" style="font-size:11px">{{ o['Phone'] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

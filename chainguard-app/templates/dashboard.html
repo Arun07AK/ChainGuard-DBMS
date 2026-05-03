@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}— Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="stat-grid">
+  <div class="stat-card blue">
+    <div class="stat-num">{{ stats.total_cases }}</div>
+    <div class="stat-label">Total Cases</div>
+  </div>
+  <div class="stat-card orange">
+    <div class="stat-num">{{ stats.open_cases }}</div>
+    <div class="stat-label">Active Cases</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-num">{{ stats.total_evidence }}</div>
+    <div class="stat-label">Evidence Items</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-num">{{ stats.pending_transfers }}</div>
+    <div class="stat-label">Pending Transfers</div>
+  </div>
+  <div class="stat-card purple">
+    <div class="stat-num">{{ stats.lab_active }}</div>
+    <div class="stat-label">In Lab Analysis</div>
+  </div>
+  <div class="stat-card yellow">
+    <div class="stat-num">{{ stats.court_upcoming }}</div>
+    <div class="stat-label">Court Requisitions</div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom:16px">
+
+  {% if overdue %}
+  <div class="card" style="border-color:rgba(255,59,59,.3)">
+    <div class="card-header" style="color:var(--red)">⚠ Overdue Transfers</div>
+    {% for r in overdue %}
+    <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between">
+        <a href="{{ url_for('evidence_detail', ev_id=r['Evidence_ID']) }}" style="font-size:13px">{{ r['Description'][:45] }}{% if r['Description']|length > 45 %}…{% endif %}</a>
+        <span class="seal">{{ r['Tamper_Seal'] }}</span>
+      </div>
+      <div class="dim" style="margin-top:3px">{{ r['FIR_Number'] }} · Since {{ r['Transfer_Date'] }} · {{ r['Assigned_To'] }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-header">Evidence by Category</div>
+    {% for row in category_dist %}
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <span class="cat-{{ row['Category']|lower }}" style="width:80px;font-size:12px;font-weight:600">{{ row['Category'] }}</span>
+      <div style="flex:1;background:var(--border);border-radius:2px;height:6px;overflow:hidden">
+        <div style="height:100%;background:var(--accent);width:{{ (row['cnt'] / stats.total_evidence * 100)|int }}%;opacity:.7"></div>
+      </div>
+      <span class="mono">{{ row['cnt'] }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<div class="card">
+  <div class="card-header">Recent Custody Transfers</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Date</th><th>Evidence</th><th>Seal</th><th>From</th><th>To</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        {% for t in recent_transfers %}
+        <tr>
+          <td class="mono">{{ t['Transfer_Date'] }}</td>
+          <td>{{ t['Evidence_Desc'][:40] }}{% if t['Evidence_Desc']|length > 40 %}…{% endif %}</td>
+          <td><span class="seal">{{ t['Tamper_Seal'] }}</span></td>
+          <td class="dim">{{ t['From_Off'] }}</td>
+          <td class="dim">{{ t['To_Off'] }}</td>
+          <td>
+            <span class="badge badge-{{ t['Status']|lower }}">{{ t['Status'] }}</span>
+            {% if t['Is_Sealed'] == 'Y' %}<span class="badge badge-sealed" style="margin-left:4px">SEALED</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
