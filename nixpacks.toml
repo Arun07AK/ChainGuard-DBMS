@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["python311", "gcc"]
+
+[phases.install]
+cmds = ["cd chainguard-app && pip install -r requirements.txt"]
+
+[start]
+cmd = "cd chainguard-app && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60"
