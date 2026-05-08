@@ -4,6 +4,7 @@
 Course: UCS310 – Database Management Systems | B.Tech 2nd Year | 2025–26
 
 🌐 **Live demo:** https://chainguard-dbms-production.up.railway.app
+🎤 **Plain-language explainer (for viva):** https://chainguard-explainer.vercel.app
 
 ---
 
