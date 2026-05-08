@@ -1,39 +1,72 @@
 {% extends 'base.html' %}
 {% block title %}— Officers{% endblock %}
-{% block page_title %}Officers{% endblock %}
+{% block crumb %}OFFICERS{% endblock %}
 {% block content %}
 
-<div class="card">
-  <div class="card-header">Officers ({{ officers|length }})</div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr>
-        <th>ID</th><th>Name</th><th>Badge</th><th>Rank</th><th>Department</th>
-        <th>Authorization</th><th>Evidence Held</th><th>Transfers</th><th>Contact</th>
-      </tr></thead>
-      <tbody>
-        {% for o in officers %}
-        <tr>
-          <td class="mono dim">{{ o['Officer_ID'] }}</td>
-          <td style="font-weight:500">{{ o['Name'] }}</td>
-          <td><span class="seal">{{ o['Badge_Number'] }}</span></td>
-          <td class="dim">{{ o['Rank'] }}</td>
-          <td class="dim" style="font-size:12px">{{ o['Department'] }}</td>
-          <td>
-            {% set lvl=o['Authorization_Level'] %}
-            {% if lvl=='ADMIN' %}<span class="badge badge-investigation">ADMIN</span>
-            {% elif lvl=='SUPERVISOR' %}<span class="badge badge-open">SUPERVISOR</span>
-            {% elif lvl=='ANALYST' %}<span class="badge" style="background:rgba(179,136,255,.12);color:var(--purple);border:1px solid rgba(179,136,255,.25)">ANALYST</span>
-            {% else %}<span class="badge badge-closed">OFFICER</span>{% endif %}
-          </td>
-          <td class="mono" style="color:var(--accent);text-align:center">{{ o['Evidence_Held'] }}</td>
-          <td class="mono dim" style="text-align:center">{{ o['Transfers_Made'] }}</td>
-          <td class="dim" style="font-size:11px">{{ o['Phone'] }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="section-h">
+  <div>
+    <h1>Personnel Roster</h1>
+    <div class="sub">// {{ officers|length }} officers · sorted by OFFICER_ID</div>
   </div>
 </div>
+
+<div class="filters">
+  <span class="lbl">CLEARANCE</span>
+  <button class="fchip on" data-f="lvl" data-v="">ALL</button>
+  <button class="fchip" data-f="lvl" data-v="ADMIN">ADMIN</button>
+  <button class="fchip" data-f="lvl" data-v="SUPERVISOR">SUPERVISOR</button>
+  <button class="fchip" data-f="lvl" data-v="ANALYST">ANALYST</button>
+  <button class="fchip" data-f="lvl" data-v="OFFICER">OFFICER</button>
+  <div class="fsearch">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="off-q" type="text" placeholder="Filter name, badge, department…" autocomplete="off">
+  </div>
+</div>
+
+<div class="gr gr-3 gap-sm" id="off-grid">
+  {% set palette = ['#1f3a4a','#3a2a4a','#3a4757','#244a3a','#4a3a1f','#3a1f2a','#2a3a4a','#4a2a3a'] %}
+  {% for o in officers %}
+  {% set color = palette[(o['Officer_ID']) % 8] %}
+  <div class="off-card" data-lvl="{{ o['Authorization_Level'] }}" data-q="{{ (o['Name'] + ' ' + (o['Badge_Number'] or '') + ' ' + (o['Department'] or '') + ' ' + (o['Rank'] or ''))|lower }}">
+    <div class="top">
+      <div class="av-lg" style="background:{{ color }}">{% set parts = o['Name'].split() %}{{ parts[0][:1] }}{% if parts|length>1 %}{{ parts[-1][:1] }}{% endif %}</div>
+      <div style="flex:1;min-width:0">
+        <div class="nm">{{ o['Name'] }}</div>
+        <div class="bd">{{ o['Badge_Number'] }} · {{ o['Rank'] }}</div>
+      </div>
+      {% set lvl=o['Authorization_Level'] %}
+      {% if lvl=='ADMIN' %}<span class="pill p-info"><span class="dot"></span>ADMIN</span>
+      {% elif lvl=='SUPERVISOR' %}<span class="pill p-good"><span class="dot"></span>SUPV</span>
+      {% elif lvl=='ANALYST' %}<span class="pill p-purple"><span class="dot"></span>ANLST</span>
+      {% else %}<span class="pill p-mute"><span class="dot"></span>OFFICER</span>{% endif %}
+    </div>
+    <div class="meta">
+      <div><span class="k">DEPT</span> &nbsp; {{ o['Department'] or '—' }}</div>
+      {% if o['Phone'] %}<div><span class="k">CONTACT</span> &nbsp; {{ o['Phone'] }}</div>{% endif %}
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n">{{ '%03d'|format(o['Evidence_Held']) }}</div><div class="l">EVIDENCE HELD</div></div>
+      <div class="stat"><div class="n">{{ '%03d'|format(o['Transfers_Made']) }}</div><div class="l">XFERS MADE</div></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if not officers %}<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><div class="et">No personnel on file</div></div>{% endif %}
+
+<script>
+(()=>{
+  const cards=[...document.querySelectorAll(".off-card")];
+  let f={lvl:"",q:""};
+  const apply=()=>cards.forEach(r=>{
+    const ok=(!f.lvl||r.dataset.lvl===f.lvl)&&(!f.q||r.dataset.q.includes(f.q));
+    r.style.display=ok?"":"none";
+  });
+  document.querySelectorAll(".fchip[data-f=lvl]").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll(".fchip[data-f=lvl]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); f.lvl=b.dataset.v; apply();
+  });
+  document.getElementById("off-q").oninput=(e)=>{ f.q=e.target.value.toLowerCase().trim(); apply(); };
+})();
+</script>
 
 {% endblock %}

@@ -1,41 +1,85 @@
 {% extends 'base.html' %}
 {% block title %}— Court Requisitions{% endblock %}
-{% block page_title %}Court Requisitions{% endblock %}
+{% block crumb %}COURT{% endblock %}
 {% block content %}
 
+<div class="section-h">
+  <div>
+    <h1>Court Requisitions</h1>
+    <div class="sub">// {{ requisitions|length }} requisitions · ordered by HEARING_DATE ASC · today highlighted</div>
+  </div>
+</div>
+
+<div class="filters">
+  <span class="lbl">STATUS</span>
+  <button class="fchip on" data-f="status" data-v="">ALL</button>
+  <button class="fchip" data-f="status" data-v="APPROVED">APPROVED</button>
+  <button class="fchip" data-f="status" data-v="PENDING">PENDING</button>
+  <button class="fchip" data-f="status" data-v="RETURNED">RETURNED</button>
+  <button class="fchip" data-f="status" data-v="REJECTED">REJECTED</button>
+  <div class="fsearch">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="ct-q" type="text" placeholder="Filter court, FIR, evidence…" autocomplete="off">
+  </div>
+</div>
+
 <div class="card">
-  <div class="card-header">Court Requisitions ({{ requisitions|length }})</div>
-  <div class="table-wrap">
-    <table>
+  <div class="card-h"><span>Requisitions</span><span class="count" id="cr-count">{{ requisitions|length }} of {{ requisitions|length }}</span></div>
+  <div class="tbl-wrap">
+    <table class="tbl" id="cr-tbl">
       <thead><tr>
-        <th>ID</th><th>Evidence</th><th>Case</th><th>Court</th>
-        <th>Hearing Date</th><th>Requested By</th><th>Requested On</th><th>Status</th>
+        <th>Requisition</th><th>Hearing Date</th><th>FIR / Crime</th><th>Evidence</th><th>Court</th><th>Requested By</th><th>Status</th>
       </tr></thead>
       <tbody>
+        {% set today = ((requisitions[0]['Hearing_Date'] if requisitions else '') and '') %}
         {% for r in requisitions %}
-        <tr>
-          <td class="mono dim">{{ r['Requisition_ID'] }}</td>
+        <tr data-status="{{ r['Status'] }}" data-q="{{ (r['Court_Name'] + ' ' + r['FIR_Number'] + ' ' + (r['Tamper_Seal'] or '') + ' ' + r['Evidence_Desc'])|lower }}" {% if r['Hearing_Date'] and r['Hearing_Date']|string == (now if now is defined else '') %}class="row-pin"{% endif %}>
           <td>
-            <a href="{{ url_for('evidence_detail', ev_id=r['Evidence_ID']) }}" class="seal">{{ r['Tamper_Seal'] }}</a>
-            <div class="dim" style="font-size:11px;margin-top:1px">{{ r['Evidence_Desc'][:40] }}{% if r['Evidence_Desc']|length > 40 %}…{% endif %}</div>
+            <span class="mono">#{{ '%04d'|format(r['Requisition_ID']) }}</span>
+            <div class="t-dimmer t-xs t-mono" style="margin-top:2px">filed {{ r['Request_Date'] }}</div>
           </td>
-          <td><span class="mono dim">{{ r['FIR_Number'] }}</span><div class="dim" style="font-size:11px">{{ r['Crime_Type'] }}</div></td>
-          <td style="font-size:12px;max-width:140px">{{ r['Court_Name'] }}</td>
-          <td class="mono" style="color:var(--yellow)">{{ r['Hearing_Date'] }}</td>
-          <td class="dim" style="font-size:12px">{{ r['Requested_By'] }}</td>
-          <td class="mono dim">{{ r['Request_Date'] }}</td>
+          <td><span class="mono" style="color:var(--text);font-size:13px">{{ r['Hearing_Date'] }}</span></td>
           <td>
-            {% set s=r['Status'] %}
-            {% if s=='APPROVED' %}<span class="badge badge-approved">APPROVED</span>
-            {% elif s=='PENDING' %}<span class="badge badge-pending">PENDING</span>
-            {% elif s=='RETURNED' %}<span class="badge badge-returned">RETURNED</span>
-            {% else %}<span class="badge badge-rejected">REJECTED</span>{% endif %}
+            <span class="mono" style="color:var(--seal)">{{ r['FIR_Number'] }}</span>
+            <div class="t-dim t-xs">{{ r['Crime_Type'] }}</div>
+          </td>
+          <td>
+            <a class="mono" href="{{ url_for('evidence_detail', ev_id=r['Evidence_ID']) }}" style="color:var(--text)">{{ r['Tamper_Seal'] or '#' ~ r['Evidence_ID'] }}</a>
+            <div class="t-dim t-xs trunc" style="max-width:200px;margin-top:2px">{{ r['Evidence_Desc'] }}</div>
+          </td>
+          <td><div class="trunc" style="max-width:160px">{{ r['Court_Name'] }}</div></td>
+          <td><span class="off"><span class="av" style="background:#1f3a4a">{{ r['Requested_By'][:1] }}</span><span class="nm">{{ r['Requested_By'].split()[0] }}</span></span></td>
+          <td>{% set s=r['Status'] %}
+            {% if s=='APPROVED' %}<span class="pill p-good"><span class="dot"></span>{{ s }}</span>
+            {% elif s=='PENDING' %}<span class="pill p-warn"><span class="dot"></span>{{ s }}</span>
+            {% elif s=='RETURNED' %}<span class="pill p-purple"><span class="dot"></span>{{ s }}</span>
+            {% else %}<span class="pill p-bad"><span class="dot"></span>{{ s }}</span>{% endif %}
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% if not requisitions %}<div class="empty"><div class="et">No active requisitions</div></div>{% endif %}
 </div>
+
+<script>
+(()=>{
+  // Pin today's row
+  const today=new Date().toISOString().slice(0,10);
+  document.querySelectorAll("#cr-tbl tbody tr").forEach(r=>{
+    const d=r.querySelector("td:nth-child(2) .mono")?.textContent.trim();
+    if(d===today) r.classList.add("row-pin");
+  });
+  const tbl=document.getElementById("cr-tbl"); if(!tbl) return;
+  const rows=[...tbl.tBodies[0].rows], c=document.getElementById("cr-count"), n=rows.length;
+  let f={status:"",q:""};
+  const apply=()=>{ let m=0; rows.forEach(r=>{ const ok=(!f.status||r.dataset.status===f.status)&&(!f.q||r.dataset.q.includes(f.q)); r.style.display=ok?"":"none"; if(ok)m++; }); c.textContent=`${m} of ${n}`; };
+  document.querySelectorAll(".fchip[data-f=status]").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll(".fchip[data-f=status]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); f.status=b.dataset.v; apply();
+  });
+  document.getElementById("ct-q").oninput=(e)=>{ f.q=e.target.value.toLowerCase().trim(); apply(); };
+})();
+</script>
 
 {% endblock %}

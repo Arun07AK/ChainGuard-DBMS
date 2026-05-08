@@ -1,102 +1,169 @@
 {% extends 'base.html' %}
 {% block title %}— Evidence #{{ ev['Evidence_ID'] }}{% endblock %}
-{% block page_title %}Evidence · {{ ev['Tamper_Seal'] }}{% endblock %}
+{% block crumb %}EVIDENCE / #{{ '%04d'|format(ev['Evidence_ID']) }}{% endblock %}
 {% block content %}
 
-<div class="grid-2" style="margin-bottom:16px">
+{# ── PRINT-ONLY HEADER ── #}
+<div class="print-only print-head">
+  <h1>CHAIN-OF-CUSTODY RECORD</h1>
+  <div class="ph-sub">
+    <b>EVIDENCE_ID</b> #{{ '%04d'|format(ev['Evidence_ID']) }}
+    &nbsp;·&nbsp; <b>TAMPER_SEAL</b> {{ ev['Tamper_Seal'] }}
+    &nbsp;·&nbsp; <b>FIR</b> {{ ev['FIR_Number'] }}
+    &nbsp;·&nbsp; <b>INTEGRITY</b> {{ chain_status }}
+  </div>
+</div>
+
+<div class="section-h">
+  <div>
+    <div class="row gap-3" style="align-items:baseline">
+      <span class="t-mono" style="color:var(--text-dim);font-size:11px;letter-spacing:.18em">EVIDENCE</span>
+      <span class="mono" style="font-size:24px;color:var(--text);font-weight:600">#{{ '%04d'|format(ev['Evidence_ID']) }}</span>
+      {% set cond=ev['Condition'] %}
+      {% if cond=='INTACT' %}<span class="pill p-good"><span class="dot"></span>INTACT</span>
+      {% elif cond=='DAMAGED' %}<span class="pill p-warn"><span class="dot"></span>DAMAGED</span>
+      {% else %}<span class="pill p-bad"><span class="dot"></span>{{ cond }}</span>{% endif %}
+      <span class="pill p-seal">SEAL · {{ ev['Tamper_Seal'] }}</span>
+    </div>
+    <div class="sub" style="margin-top:8px;color:var(--text);font-family:var(--font-body);font-size:14px;letter-spacing:0;text-transform:none;max-width:720px">{{ ev['Description'] }}</div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('evidence_list') }}">← Registry</a>
+    <button class="btn primary" onclick="window.print()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print record
+    </button>
+  </div>
+</div>
+
+{# ── INTEGRITY BANNER ── #}
+{% if chain_status == 'INTACT' %}
+<div class="banner ok mt">
+  <div class="ico">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg>
+  </div>
+  <div>
+    <div class="ti">CHAIN INTACT</div>
+    <div class="meta">validate_chain.fn_validate_chain_integrity(<span class="mono" style="color:var(--text)">{{ ev['Evidence_ID'] }}</span>) → <b style="color:var(--good)">INTACT</b> &nbsp;·&nbsp; {{ transfers|length }} custody records verified · no gaps · no unsealed handoffs</div>
+  </div>
+</div>
+{% else %}
+<div class="banner bad mt">
+  <div class="ico">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+  </div>
+  <div>
+    <div class="ti">CHAIN COMPROMISED</div>
+    <div class="meta">validate_chain.fn_validate_chain_integrity(<span class="mono" style="color:var(--text)">{{ ev['Evidence_ID'] }}</span>) → <b style="color:var(--bad)">{{ chain_status }}</b></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="gr gr-2-1 mt-lg">
+  {# ── METADATA ── #}
   <div class="card">
-    <div class="card-header">Evidence Details</div>
-    <table style="font-size:13px">
-      <tr><td class="dim" style="padding:5px 0;width:130px">Evidence ID</td><td class="mono">#{{ ev['Evidence_ID'] }}</td></tr>
-      <tr><td class="dim" style="padding:5px 0">Tamper Seal</td><td><span class="seal" style="font-size:13px">{{ ev['Tamper_Seal'] }}</span></td></tr>
-      <tr><td class="dim" style="padding:5px 0">Description</td><td style="font-weight:500">{{ ev['Description'] }}</td></tr>
-      <tr><td class="dim" style="padding:5px 0">Category</td><td><span class="cat-{{ ev['Category']|lower }}" style="font-weight:600">{{ ev['Category'] }}</span></td></tr>
-      <tr><td class="dim" style="padding:5px 0">Condition</td>
-        <td>{% set cond=ev['Condition'] %}
-          {% if cond=='INTACT' %}<span class="badge badge-intact">INTACT</span>
-          {% elif cond=='DAMAGED' %}<span class="badge badge-damaged">DAMAGED</span>
-          {% else %}<span class="badge badge-cancelled">{{ cond }}</span>{% endif %}
-        </td>
-      </tr>
-      <tr><td class="dim" style="padding:5px 0">Date Collected</td><td class="mono">{{ ev['Date_Collected'] }}</td></tr>
-      <tr><td class="dim" style="padding:5px 0">Current Location</td><td>{{ ev['Current_Location'] }}</td></tr>
-      <tr><td class="dim" style="padding:5px 0">Custodian</td><td>{{ ev['Custodian_Name'] }}<br><span class="mono dim">{{ ev['Badge_Number'] }}</span></td></tr>
-      <tr><td class="dim" style="padding:5px 0">Storage</td><td class="dim">{{ ev['Facility_Name'] or '—' }}</td></tr>
-      <tr><td class="dim" style="padding:5px 0">Case</td><td><a href="{{ url_for('case_detail', case_id=ev['Case_ID']) }}" class="seal">{{ ev['FIR_Number'] }}</a> · {{ ev['Crime_Type'] }}</td></tr>
-    </table>
+    <div class="card-h"><span>Evidence Metadata</span><div class="corner"><i></i><i></i><i></i></div></div>
+    <div class="card-b">
+      <div class="gr gr-2 gap-sm" style="row-gap:14px">
+        <div><div class="t-mono t-xs t-dimmer t-up">Tamper Seal</div><div class="mono" style="color:var(--seal);font-size:14px;margin-top:2px">{{ ev['Tamper_Seal'] }}</div></div>
+        <div><div class="t-mono t-xs t-dimmer t-up">Category</div><div style="font-size:14px;margin-top:2px">{{ ev['Category'] }}</div></div>
+        <div><div class="t-mono t-xs t-dimmer t-up">Date Collected</div><div class="mono" style="margin-top:2px">{{ ev['Date_Collected'] }}</div></div>
+        <div><div class="t-mono t-xs t-dimmer t-up">Condition</div><div style="margin-top:2px">{{ ev['Condition'] }}</div></div>
+        <div><div class="t-mono t-xs t-dimmer t-up">Current Location</div><div style="margin-top:2px">{{ ev['Current_Location'] or '—' }}</div></div>
+        <div><div class="t-mono t-xs t-dimmer t-up">Storage Facility</div><div style="margin-top:2px">{{ ev['Facility_Name'] or '—' }}{% if ev['Facility_Type'] %} <span class="t-dim t-sm">· {{ ev['Facility_Type'] }}</span>{% endif %}</div></div>
+        <div><div class="t-mono t-xs t-dimmer t-up">Linked Case</div><div style="margin-top:2px"><a class="mono" href="{{ url_for('case_detail', case_id=ev['Case_ID']) }}" style="color:var(--seal)">{{ ev['FIR_Number'] }}</a> <span class="t-dim t-sm">· {{ ev['Crime_Type'] }}</span></div></div>
+        <div><div class="t-mono t-xs t-dimmer t-up">Case Status</div><div style="margin-top:2px">{{ ev['Case_Status'] }}</div></div>
+      </div>
+      <hr class="div">
+      <div class="t-mono t-xs t-dimmer t-up" style="margin-bottom:6px">Current Custodian</div>
+      <span class="off"><span class="av" style="background:#1f3a4a">{{ ev['Custodian_Name'][:2]|upper }}</span><span class="nm">{{ ev['Custodian_Name'] }}</span><span class="bd">· {{ ev['Badge_Number'] }} · {{ ev['Department'] }}</span></span>
+    </div>
   </div>
 
+  {# ── LAB ANALYSES ── #}
   <div class="card">
-    <div class="card-header">Chain Integrity</div>
-    <div style="padding:16px 0">
-      {% if chain_status == 'INTACT' %}
-      <div class="chain-intact" style="font-size:16px">
-        <span style="font-size:22px">✓</span> {{ chain_status }}
-      </div>
-      <div class="dim" style="margin-top:8px;font-size:12px">All {{ transfers|length }} custody records verified. No gaps detected.</div>
+    <div class="card-h"><span>Lab Analyses</span><span class="count">{{ analyses|length }}</span></div>
+    <div class="card-b">
+      {% if analyses %}
+        {% for a in analyses %}
+        <div style="padding:10px 0;border-bottom:1px dashed var(--border)">
+          <div class="row between">
+            <div class="t-mono t-sm" style="color:var(--text)">{{ a['Lab_Name'] }}</div>
+            {% set s=a['Status'] %}
+            {% if s=='COMPLETED' %}<span class="pill p-good"><span class="dot"></span>DONE</span>
+            {% elif s=='IN_PROGRESS' %}<span class="pill p-info"><span class="dot"></span>IN PROGRESS</span>
+            {% else %}<span class="pill p-warn"><span class="dot"></span>{{ s }}</span>{% endif %}
+          </div>
+          <div class="t-dim t-sm" style="margin-top:4px">
+            <span class="mono">{{ a['Start_Date'] }}{% if a['End_Date'] %} → {{ a['End_Date'] }}{% else %} → ongoing{% endif %}</span>
+          </div>
+          <div class="t-mono t-xs t-dimmer t-up" style="margin-top:6px">Analyst</div>
+          <span class="off" style="margin-top:2px"><span class="av" style="background:#3a2a4a">{{ a['Analyst_Name'][:2]|upper }}</span><span class="nm">{{ a['Analyst_Name'] }}</span></span>
+          {% if a['Findings'] %}<div class="t-sm" style="margin-top:8px;color:var(--text-mute);line-height:1.55">{{ a['Findings'][:160] }}{% if a['Findings']|length>160 %}…{% endif %}</div>{% endif %}
+        </div>
+        {% endfor %}
       {% else %}
-      <div class="chain-broken" style="font-size:14px">
-        <span style="font-size:20px">✗</span> {{ chain_status }}
-      </div>
+        <div class="empty" style="padding:24px 10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 3v6L4 18a3 3 0 0 0 2.6 4.5h10.8A3 3 0 0 0 20 18l-5-9V3"/></svg><div class="et">No analyses</div><div class="es">No lab work has been requested for this item.</div></div>
       {% endif %}
     </div>
-    {% if analyses %}
-    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-      <div class="card-header" style="margin-bottom:8px">Lab Analyses</div>
-      {% for a in analyses %}
-      <div style="margin-bottom:8px;padding:8px;background:var(--surface);border-radius:4px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:12px;font-weight:500">{{ a['Lab_Name'] }}</span>
-          <span class="badge badge-{{ a['Status']|lower|replace('_','-') }}">{{ a['Status'] }}</span>
+  </div>
+</div>
+
+{# ── CUSTODY CHAIN ── #}
+<div class="card mt-lg">
+  <div class="card-h"><span>Custody Chain</span><span class="count">{{ transfers|length }} records · ordered ASC</span></div>
+  <div class="card-b">
+    {% if transfers %}
+    <div class="chain">
+      {% set ns = namespace(prev_to=none) %}
+      {% for t in transfers %}
+        {% set is_initial = (loop.first and t['From_Officer_ID']==t['To_Officer_ID']) %}
+        {% set is_gap = (not loop.first and ns.prev_to is not none and ns.prev_to != t['From_Officer_ID']) %}
+        <div class="chain-item {% if is_gap %}gap{% endif %}">
+          <span class="chain-dot {% if is_initial %}start{% elif is_gap %}gap{% elif t['Is_Sealed']=='Y' %}sealed{% endif %}"></span>
+          <div class="chain-card {% if is_gap %}gap{% endif %}">
+            <div class="chain-meta">
+              {% if is_initial %}<span class="chain-tag" style="color:var(--accent);border-color:rgba(0,212,255,.4);background:rgba(0,212,255,.08)">INITIAL COLLECTION</span>
+              {% elif is_gap %}<span class="chain-tag" style="color:var(--bad);border-color:rgba(255,59,59,.4);background:rgba(255,59,59,.08)">⚠ CHAIN GAP</span>
+              {% else %}<span class="chain-tag" style="color:var(--text-mute);border-color:var(--border);background:var(--surface)">TRANSFER&nbsp;·&nbsp;{{ '%03d'|format(loop.index) }}</span>{% endif %}
+              <span class="t">{{ t['Transfer_Date'] }}</span>
+              <span class="l">@ {{ t['Location'] or '—' }}</span>
+              <div style="margin-left:auto;display:flex;gap:6px">
+                {% set s=t['Status'] %}
+                {% if s=='COMPLETED' %}<span class="pill p-good"><span class="dot"></span>{{ s }}</span>
+                {% elif s=='PENDING' %}<span class="pill p-warn"><span class="dot"></span>{{ s }}</span>
+                {% else %}<span class="pill p-bad"><span class="dot"></span>{{ s }}</span>{% endif %}
+                {% if t['Is_Sealed']=='Y' %}<span class="pill p-seal">SEALED</span>{% endif %}
+                {% set cn=t['Evidence_Condition'] %}
+                {% if cn=='INTACT' %}<span class="pill p-good"><span class="dot"></span>{{ cn }}</span>
+                {% elif cn=='DAMAGED' %}<span class="pill p-warn"><span class="dot"></span>{{ cn }}</span>
+                {% else %}<span class="pill p-bad"><span class="dot"></span>{{ cn }}</span>{% endif %}
+              </div>
+            </div>
+            <div class="chain-route">
+              {% if is_initial %}
+                <span class="t-mono t-sm" style="color:var(--text-mute)">collected by</span>
+                <span class="off"><span class="av" style="background:#1f3a4a">{{ t['To_Off'][:2]|upper }}</span><span class="nm">{{ t['To_Off'] }}</span><span class="bd">· {{ t['To_Badge'] }}</span></span>
+              {% else %}
+                <span class="off"><span class="av" style="background:#3a4757">{{ t['From_Off'][:2]|upper }}</span><span class="nm">{{ t['From_Off'] }}</span><span class="bd">· {{ t['From_Badge'] }}</span></span>
+                <span class="arr">→</span>
+                <span class="off"><span class="av" style="background:#1f3a4a">{{ t['To_Off'][:2]|upper }}</span><span class="nm">{{ t['To_Off'] }}</span><span class="bd">· {{ t['To_Badge'] }}</span></span>
+              {% endif %}
+            </div>
+            <div class="chain-r"><span class="t-dimmer t-mono t-xs t-up">REASON&nbsp;//</span> {{ t['Reason'] }}</div>
+          </div>
         </div>
-        <div class="dim" style="font-size:11px;margin-top:3px">{{ a['Analyst_Name'] }} · {{ a['Start_Date'] }}{% if a['End_Date'] %} → {{ a['End_Date'] }}{% endif %} ({{ a['Days_In_Lab'] }}d)</div>
-        {% if a['Findings'] %}
-        <div style="margin-top:6px;font-size:12px;color:var(--text)">{{ a['Findings'][:120] }}{% if a['Findings']|length > 120 %}…{% endif %}</div>
-        {% endif %}
-      </div>
+        {% set ns.prev_to = t['To_Officer_ID'] %}
       {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M10 13a5 5 0 0 1 7-7l3 3a5 5 0 0 1-7 7"/><path d="M14 11a5 5 0 0 1-7 7l-3-3a5 5 0 0 1 7-7"/></svg>
+      <div class="et">No custody records</div>
+      <div class="es">This item has not been transferred since intake.</div>
     </div>
     {% endif %}
   </div>
-</div>
-
-<div class="card">
-  <div class="card-header">Custody Chain ({{ transfers|length }} records)</div>
-  <div class="timeline" style="padding-top:8px">
-    {% for t in transfers %}
-    <div class="tl-item">
-      <div class="tl-dot {% if t['Is_Sealed']=='Y' %}sealed{% elif t['Status']=='PENDING' %}pending{% endif %}"></div>
-      <div class="tl-body">
-        <div class="tl-header">
-          <div>
-            <span class="tl-date">{{ t['Transfer_Date'] }}</span>
-            <span class="dim" style="margin-left:8px">·</span>
-            <span class="dim" style="margin-left:8px;font-size:11px">{{ t['Location'] }}</span>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <span class="badge badge-{{ t['Status']|lower }}">{{ t['Status'] }}</span>
-            {% if t['Is_Sealed']=='Y' %}<span class="badge badge-sealed">SEALED</span>{% endif %}
-            {% set cond=t['Evidence_Condition'] %}
-            {% if cond=='INTACT' %}<span class="badge badge-intact">{{ cond }}</span>
-            {% elif cond=='DAMAGED' %}<span class="badge badge-damaged">{{ cond }}</span>
-            {% else %}<span class="badge badge-cancelled">{{ cond }}</span>{% endif %}
-          </div>
-        </div>
-        <div class="tl-officers">
-          <span style="color:var(--muted)">{{ t['From_Off'] }}</span>
-          <span style="color:var(--accent);margin:0 6px">→</span>
-          <span style="font-weight:500">{{ t['To_Off'] }}</span>
-          <span class="mono dim" style="margin-left:8px;font-size:10px">{{ t['From_Badge'] }} → {{ t['To_Badge'] }}</span>
-        </div>
-        <div class="tl-reason">{{ t['Reason'] }}</div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-</div>
-
-<div style="margin-top:12px">
-  <a href="{{ url_for('evidence_list') }}" style="color:var(--muted);font-size:13px">← Back to Evidence</a>
 </div>
 
 {% endblock %}

@@ -1,90 +1,153 @@
 {% extends 'base.html' %}
 {% block title %}— Dashboard{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% block crumb %}DASHBOARD{% endblock %}
 {% block content %}
 
-<div class="stat-grid">
-  <div class="stat-card blue">
-    <div class="stat-num">{{ stats.total_cases }}</div>
-    <div class="stat-label">Total Cases</div>
+<div class="section-h">
+  <div>
+    <h1>Operations Overview</h1>
+    <div class="sub">// real-time chain-of-custody telemetry · refreshes every 5s</div>
   </div>
-  <div class="stat-card orange">
-    <div class="stat-num">{{ stats.open_cases }}</div>
-    <div class="stat-label">Active Cases</div>
-  </div>
-  <div class="stat-card green">
-    <div class="stat-num">{{ stats.total_evidence }}</div>
-    <div class="stat-label">Evidence Items</div>
-  </div>
-  <div class="stat-card red">
-    <div class="stat-num">{{ stats.pending_transfers }}</div>
-    <div class="stat-label">Pending Transfers</div>
-  </div>
-  <div class="stat-card purple">
-    <div class="stat-num">{{ stats.lab_active }}</div>
-    <div class="stat-label">In Lab Analysis</div>
-  </div>
-  <div class="stat-card yellow">
-    <div class="stat-num">{{ stats.court_upcoming }}</div>
-    <div class="stat-label">Court Requisitions</div>
+  <div class="actions">
+    <button class="btn" onclick="window.print()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Export
+    </button>
+    <a class="btn primary" href="{{ url_for('audit') }}">Audit log →</a>
   </div>
 </div>
 
-<div class="grid-2" style="margin-bottom:16px">
-
-  {% if overdue %}
-  <div class="card" style="border-color:rgba(255,59,59,.3)">
-    <div class="card-header" style="color:var(--red)">⚠ Overdue Transfers</div>
-    {% for r in overdue %}
-    <div style="padding:8px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;justify-content:space-between">
-        <a href="{{ url_for('evidence_detail', ev_id=r['Evidence_ID']) }}" style="font-size:13px">{{ r['Description'][:45] }}{% if r['Description']|length > 45 %}…{% endif %}</a>
-        <span class="seal">{{ r['Tamper_Seal'] }}</span>
-      </div>
-      <div class="dim" style="margin-top:3px">{{ r['FIR_Number'] }} · Since {{ r['Transfer_Date'] }} · {{ r['Assigned_To'] }}</div>
-    </div>
-    {% endfor %}
+<div class="gr gr-3-2">
+  <div class="kpi">
+    <div class="kpi-l"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h18v13H3z"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>TOTAL CASES</div>
+    <div class="kpi-n">{{ '%03d'|format(stats.total_cases) }}</div>
+    <div class="kpi-d"><b>{{ stats.open_cases }}</b> active &nbsp;·&nbsp; {{ stats.total_cases - stats.open_cases }} closed</div>
   </div>
-  {% endif %}
+  <div class="kpi k-warn">
+    <div class="kpi-l"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l3 2"/></svg>OPEN INVESTIGATIONS</div>
+    <div class="kpi-n">{{ '%03d'|format(stats.open_cases) }}</div>
+    <div class="kpi-d">under_investigation + open</div>
+  </div>
+  <div class="kpi k-good">
+    <div class="kpi-l"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m12 3 9 4-9 4-9-4 9-4Z"/><path d="M3 11.5 12 16l9-4.5"/><path d="M3 16.5 12 21l9-4.5"/></svg>EVIDENCE ITEMS</div>
+    <div class="kpi-n">{{ '%04d'|format(stats.total_evidence) }}</div>
+    <div class="kpi-d">tracked across all custody states</div>
+  </div>
+  <div class="kpi {% if stats.pending_transfers > 0 %}k-bad{% endif %}">
+    <div class="kpi-l"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h14"/><path d="m13 6 6 6-6 6"/></svg>PENDING TRANSFERS</div>
+    <div class="kpi-n">{{ '%03d'|format(stats.pending_transfers) }}</div>
+    <div class="kpi-d">{% if overdue|length %}<b class="b">{{ overdue|length }} overdue</b>{% else %}<b>0 overdue</b>{% endif %} &nbsp;·&nbsp; awaiting receipt</div>
+  </div>
+  <div class="kpi k-purple">
+    <div class="kpi-l"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 3v6L4 18a3 3 0 0 0 2.6 4.5h10.8A3 3 0 0 0 20 18l-5-9V3"/><path d="M8 3h8"/></svg>LAB ACTIVE</div>
+    <div class="kpi-n">{{ '%03d'|format(stats.lab_active) }}</div>
+    <div class="kpi-d">in_progress + pending analyses</div>
+  </div>
+  <div class="kpi k-seal">
+    <div class="kpi-l"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m3 10 9-6 9 6"/><path d="M5 21V10"/><path d="M19 21V10"/><path d="M3 21h18"/></svg>COURT REQUISITIONS</div>
+    <div class="kpi-n">{{ '%03d'|format(stats.court_upcoming) }}</div>
+    <div class="kpi-d">approved + pending hearings</div>
+  </div>
+</div>
+
+<div class="gr gr-2 mt-lg">
 
   <div class="card">
-    <div class="card-header">Evidence by Category</div>
-    {% for row in category_dist %}
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <span class="cat-{{ row['Category']|lower }}" style="width:80px;font-size:12px;font-weight:600">{{ row['Category'] }}</span>
-      <div style="flex:1;background:var(--border);border-radius:2px;height:6px;overflow:hidden">
-        <div style="height:100%;background:var(--accent);width:{{ (row['cnt'] / stats.total_evidence * 100)|int }}%;opacity:.7"></div>
-      </div>
-      <span class="mono">{{ row['cnt'] }}</span>
+    <div class="card-h">
+      <span>Overdue Custody Transfers</span>
+      <span class="count">{{ overdue|length }} flagged · pending &gt; 2d</span>
     </div>
-    {% endfor %}
+    <div class="card-b flush">
+      {% if overdue %}
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Evidence</th><th>FIR</th><th>Assigned</th><th class="num">Since</th></tr></thead>
+        <tbody>
+          {% for r in overdue %}
+          <tr class="row-link row-alert" onclick="location.href='{{ url_for('evidence_detail', ev_id=r['Evidence_ID']) }}'">
+            <td>
+              <div class="row gap-2">
+                <span class="mono">#{{ '%04d'|format(r['Evidence_ID']) }}</span>
+                <span class="pill p-bad"><span class="dot"></span>OVERDUE</span>
+              </div>
+              <div class="t-dim t-sm trunc" style="max-width:240px;margin-top:3px">{{ r['Description'] }}</div>
+            </td>
+            <td><span class="mono" style="color:var(--seal)">{{ r['FIR_Number'] }}</span></td>
+            <td><span class="off"><span class="av" style="background:#3a4757">{{ r['Assigned_To'][:1] }}</span><span class="nm">{{ r['Assigned_To'].split()[0] }}</span></span></td>
+            <td class="num"><span class="mono">{{ r['Transfer_Date'] }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}
+      <div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M20 6 9 17l-5-5"/></svg>
+        <div class="et">No overdue transfers</div>
+        <div class="es">All custody handoffs are within the 48-hour acknowledgement window.</div>
+      </div>
+      {% endif %}
+    </div>
   </div>
 
+  <div class="card">
+    <div class="card-h">
+      <span>Recent Custody Transfers</span>
+      <span class="count">last 6</span>
+    </div>
+    <div class="card-b flush">
+      {% if recent_transfers %}
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Date</th><th>Evidence</th><th>From → To</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for t in recent_transfers %}
+          <tr>
+            <td><span class="mono t-dim">{{ t['Transfer_Date'] }}</span></td>
+            <td>
+              <div class="mono" style="color:var(--seal)">{{ t['Tamper_Seal'] if t['Tamper_Seal'] else '—' }}</div>
+              <div class="t-dim t-sm trunc" style="max-width:200px">{{ t['Description'] }}</div>
+            </td>
+            <td>
+              <div class="row gap-1 nowrap">
+                <span class="off"><span class="av" style="background:#3a4757">{{ t['From_Off'][:1] }}</span><span class="nm">{{ t['From_Off'].split()[0] }}</span></span>
+                <span class="arr">→</span>
+                <span class="off"><span class="av" style="background:#1f3a4a">{{ t['To_Off'][:1] }}</span><span class="nm">{{ t['To_Off'].split()[0] }}</span></span>
+              </div>
+            </td>
+            <td>
+              {% set s=t['Status'] %}
+              {% if s=='COMPLETED' %}<span class="pill p-good"><span class="dot"></span>{{ s }}</span>
+              {% elif s=='PENDING' %}<span class="pill p-warn"><span class="dot"></span>{{ s }}</span>
+              {% else %}<span class="pill p-bad"><span class="dot"></span>{{ s }}</span>{% endif %}
+              {% if t['Is_Sealed']=='Y' %}<span class="pill p-seal" style="margin-left:4px">SEALED</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}
+      <div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="9"/></svg><div class="et">No transfer activity</div></div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 
-<div class="card">
-  <div class="card-header">Recent Custody Transfers</div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr>
-        <th>Date</th><th>Evidence</th><th>Seal</th><th>From</th><th>To</th><th>Status</th>
-      </tr></thead>
-      <tbody>
-        {% for t in recent_transfers %}
-        <tr>
-          <td class="mono">{{ t['Transfer_Date'] }}</td>
-          <td>{{ t['Description'][:40] }}{% if t['Description']|length > 40 %}…{% endif %}</td>
-          <td><span class="seal">{{ t['Tamper_Seal'] }}</span></td>
-          <td class="dim">{{ t['From_Off'] }}</td>
-          <td class="dim">{{ t['To_Off'] }}</td>
-          <td>
-            <span class="badge badge-{{ t['Status']|lower }}">{{ t['Status'] }}</span>
-            {% if t['Is_Sealed'] == 'Y' %}<span class="badge badge-sealed" style="margin-left:4px">SEALED</span>{% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="card mt-lg">
+  <div class="card-h">
+    <span>Evidence Distribution by Category</span>
+    <span class="count">n = {{ stats.total_evidence }}</span>
+  </div>
+  <div class="card-b">
+    {% if category_dist %}
+      {% set max_cnt = (category_dist|map(attribute='cnt')|max) or 1 %}
+      {% for row in category_dist %}
+      <div class="bar-row">
+        <span class="lbl">{{ row['Category'] }}</span>
+        <div class="bar"><i style="width:{{ (row['cnt']/max_cnt*100)|round(1) }}%"></i></div>
+        <span class="v">{{ '%03d'|format(row['cnt']) }} <span class="t-dimmer">·&nbsp;{{ ((row['cnt']/stats.total_evidence)*100)|round(1) }}%</span></span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty"><div class="et">No evidence categorised</div></div>
+    {% endif %}
   </div>
 </div>
 

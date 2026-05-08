@@ -2,7 +2,8 @@
 ChainGuard Flask Application
 Run: python app.py
 """
-from flask import Flask, render_template, request, redirect, url_for, flash, g
+from flask import Flask, render_template, request, redirect, url_for, flash, g, jsonify
+from datetime import datetime
 import sqlite3, os
 
 app = Flask(__name__)
@@ -267,6 +268,84 @@ def audit():
         ORDER BY al.Log_ID DESC
     """)
     return render_template('audit.html', logs=rows)
+
+# ── /api/status ───────────────────────────────────────────────
+@app.route('/api/status')
+def api_status():
+    open_cases = q1(
+        "SELECT COUNT(*) FROM Cases WHERE Status IN ('OPEN','UNDER_INVESTIGATION')"
+    )[0]
+    pending_transfers = q1(
+        "SELECT COUNT(*) FROM Custody_Transfers WHERE Status='PENDING'"
+    )[0]
+    tamper_attempts = q1(
+        "SELECT COUNT(*) FROM Audit_Log WHERE UPPER(IP_Note) LIKE '%TAMPER%'"
+    )[0]
+    return jsonify({
+        'open_cases':        open_cases,
+        'pending_transfers': pending_transfers,
+        'tamper_attempts':   tamper_attempts,
+        'server_time':       datetime.utcnow().isoformat(timespec='seconds') + 'Z',
+    })
+
+
+# ── /api/search ───────────────────────────────────────────────
+@app.route('/api/search')
+def api_search():
+    term = (request.args.get('q') or '').strip()
+    if not term:
+        return jsonify({'results': []})
+    like = f'%{term}%'
+    results = []
+
+    for r in q("""
+        SELECT Case_ID, FIR_Number, Crime_Type, Status
+        FROM Cases
+        WHERE FIR_Number LIKE ? OR Crime_Type LIKE ?
+        ORDER BY Case_ID DESC LIMIT 6
+    """, (like, like)):
+        results.append({
+            'type':     'case',
+            'id':       r['Case_ID'],
+            'label':    r['FIR_Number'],
+            'sublabel': f"{r['Crime_Type']} · {r['Status']}",
+            'url':      url_for('case_detail', case_id=r['Case_ID']),
+        })
+
+    is_num = term.lstrip('#').isdigit()
+    ev_rows = q("""
+        SELECT Evidence_ID, Tamper_Seal, Description, Category
+        FROM Evidence
+        WHERE Tamper_Seal LIKE ? OR Description LIKE ?
+              OR (? != 0 AND Evidence_ID = ?)
+        ORDER BY Evidence_ID DESC LIMIT 6
+    """, (like, like, 1 if is_num else 0, int(term.lstrip('#')) if is_num else 0))
+    for r in ev_rows:
+        desc = (r['Description'] or '')[:60]
+        results.append({
+            'type':     'evidence',
+            'id':       r['Evidence_ID'],
+            'label':    f"#{r['Evidence_ID']:04d} · {r['Tamper_Seal'] or '—'}",
+            'sublabel': f"{r['Category']} · {desc}",
+            'url':      url_for('evidence_detail', ev_id=r['Evidence_ID']),
+        })
+
+    for r in q("""
+        SELECT Officer_ID, Name, Badge_Number, Rank, Department
+        FROM Officers
+        WHERE Badge_Number LIKE ? OR Name LIKE ?
+        ORDER BY Officer_ID LIMIT 6
+    """, (like, like)):
+        results.append({
+            'type':     'officer',
+            'id':       r['Officer_ID'],
+            'label':    f"{r['Name']} · {r['Badge_Number']}",
+            'sublabel': f"{r['Rank']} · {r['Department']}",
+            'url':      url_for('officers'),
+        })
+
+    return jsonify({'results': results[:15]})
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=int(os.environ.get('PORT', 5050)), host='0.0.0.0')

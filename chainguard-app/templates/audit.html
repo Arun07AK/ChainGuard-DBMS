@@ -1,38 +1,73 @@
 {% extends 'base.html' %}
 {% block title %}— Audit Log{% endblock %}
-{% block page_title %}Audit Log{% endblock %}
+{% block crumb %}AUDIT{% endblock %}
 {% block content %}
 
-<div class="card">
-  <div class="card-header">Audit Log ({{ logs|length }} entries)</div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr>
-        <th>Log ID</th><th>Timestamp</th><th>Table</th><th>Operation</th>
-        <th>Record</th><th>Officer</th><th>Old Value</th><th>New Value</th><th>Note</th>
-      </tr></thead>
-      <tbody>
-        {% for l in logs %}
-        <tr>
-          <td class="mono dim">{{ l['Log_ID'] }}</td>
-          <td class="mono dim" style="white-space:nowrap">{{ l['Action_Timestamp'] }}</td>
-          <td><span class="badge badge-closed">{{ l['Table_Name'] }}</span></td>
-          <td>
-            {% set op=l['Operation'] %}
-            {% if op=='INSERT' %}<span class="badge badge-open">INSERT</span>
-            {% elif op=='UPDATE' %}<span class="badge badge-pending">UPDATE</span>
-            {% else %}<span class="badge badge-rejected">DELETE</span>{% endif %}
-          </td>
-          <td class="mono dim">#{{ l['Record_ID'] }}</td>
-          <td class="dim" style="font-size:12px">{{ l['Officer_Name'] or '—' }}</td>
-          <td style="font-size:11px;color:var(--muted);max-width:120px">{{ l['Old_Value'] or '—' }}</td>
-          <td style="font-size:11px;color:var(--text);max-width:120px">{{ (l['New_Value'] or '—')[:60] }}{% if l['New_Value'] and l['New_Value']|length > 60 %}…{% endif %}</td>
-          <td style="font-size:11px;color:{% if l['IP_Note'] and 'TAMPER' in l['IP_Note'] %}var(--red){% else %}var(--muted){% endif %}">{{ l['IP_Note'] or '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<div class="section-h">
+  <div>
+    <h1>Audit Trail</h1>
+    <div class="sub">// {{ logs|length }} entries · ordered by LOG_ID DESC · TAMPER attempts highlighted</div>
   </div>
 </div>
+
+<div class="filters">
+  <span class="lbl">SEVERITY</span>
+  <button class="fchip on" data-f="sev" data-v="">ALL</button>
+  <button class="fchip" data-f="sev" data-v="alert">ALERT</button>
+  <button class="fchip" data-f="sev" data-v="warn">WARN</button>
+  <button class="fchip" data-f="sev" data-v="info">INFO</button>
+  <div class="fsearch">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="au-q" type="text" placeholder="Filter table, operation, officer…" autocomplete="off">
+  </div>
+</div>
+
+<div class="term" id="audit-term">
+  <div class="term-row" style="background:var(--surface-2);padding:8px 16px">
+    <span class="t-mono t-xs t-up t-dimmer">TIMESTAMP</span>
+    <span class="t-mono t-xs t-up t-dimmer">SEV</span>
+    <span class="t-mono t-xs t-up t-dimmer">OPERATION</span>
+    <span class="t-mono t-xs t-up t-dimmer">DETAILS</span>
+  </div>
+  {% for l in logs %}
+    {% set is_tamper = l['IP_Note'] and 'TAMPER' in l['IP_Note']|upper %}
+    {% set sev = 'alert' if is_tamper else ('warn' if l['Operation']=='DELETE' else 'info') %}
+    <div class="term-row {{ sev }}" data-sev="{{ sev }}" data-q="{{ ((l['Table_Name'] or '') + ' ' + l['Operation'] + ' ' + (l['Officer_Name'] or '') + ' ' + (l['IP_Note'] or '') + ' ' + (l['New_Value'] or ''))|lower }}">
+      <span class="ts">{{ l['Action_Timestamp'] }}</span>
+      <span class="sev {{ sev }}">
+        {% if sev=='alert' %}■ ALERT{% elif sev=='warn' %}▲ WARN{% else %}● INFO{% endif %}
+      </span>
+      <span>
+        <span class="act">{{ l['Operation'] }}</span>
+        <span class="t-dimmer t-xs t-mono" style="margin-left:6px">{{ l['Table_Name'] }}#{{ l['Record_ID'] }}</span>
+      </span>
+      <span class="det">
+        {% if l['Officer_Name'] %}<b>{{ l['Officer_Name'] }}</b>{% else %}<span class="t-dimmer">SYSTEM</span>{% endif %}
+        {% if l['IP_Note'] %} &middot; <span class="{% if is_tamper %}t-mono{% endif %}" style="{% if is_tamper %}color:var(--bad){% endif %}">{{ l['IP_Note'] }}</span>{% endif %}
+        {% if l['Old_Value'] or l['New_Value'] %}
+          &middot; <span class="t-dimmer">{{ (l['Old_Value'] or '∅')[:40] }} → </span><b>{{ (l['New_Value'] or '∅')[:60] }}</b>
+        {% endif %}
+      </span>
+    </div>
+  {% endfor %}
+</div>
+
+{% if not logs %}<div class="empty"><div class="et">Audit trail empty</div></div>{% endif %}
+
+<script>
+(()=>{
+  const term=document.getElementById("audit-term"); if(!term) return;
+  const rows=[...term.querySelectorAll(".term-row[data-sev]")];
+  let f={sev:"",q:""};
+  const apply=()=>rows.forEach(r=>{
+    const ok=(!f.sev||r.dataset.sev===f.sev)&&(!f.q||r.dataset.q.includes(f.q));
+    r.style.display=ok?"":"none";
+  });
+  document.querySelectorAll(".fchip[data-f=sev]").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll(".fchip[data-f=sev]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); f.sev=b.dataset.v; apply();
+  });
+  document.getElementById("au-q").oninput=(e)=>{ f.q=e.target.value.toLowerCase().trim(); apply(); };
+})();
+</script>
 
 {% endblock %}

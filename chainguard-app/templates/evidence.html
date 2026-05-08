@@ -1,44 +1,66 @@
 {% extends 'base.html' %}
-{% block title %}— Evidence{% endblock %}
-{% block page_title %}Evidence Registry{% endblock %}
+{% block title %}— Evidence Registry{% endblock %}
+{% block crumb %}EVIDENCE{% endblock %}
 {% block content %}
 
-<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">
-  <a href="{{ url_for('evidence_list') }}" class="badge {% if not selected_cat %}badge-investigation{% else %}badge-closed{% endif %}" style="padding:5px 10px;cursor:pointer">ALL</a>
+<div class="section-h">
+  <div>
+    <h1>Evidence Registry</h1>
+    <div class="sub">// {{ evidence|length }} items · ordered by EVIDENCE_ID</div>
+  </div>
+</div>
+
+<div class="filters">
+  <span class="lbl">CATEGORY</span>
+  <a href="{{ url_for('evidence_list') }}" class="fchip {% if not selected_cat %}on{% endif %}">ALL</a>
   {% for cat in categories %}
-  <a href="{{ url_for('evidence_list', category=cat) }}" class="badge {% if selected_cat==cat %}badge-investigation{% else %}badge-closed{% endif %}" style="padding:5px 10px;cursor:pointer">{{ cat }}</a>
+  <a href="{{ url_for('evidence_list', category=cat) }}" class="fchip {% if selected_cat==cat %}on{% endif %}">{{ cat }}</a>
   {% endfor %}
+  <div class="fsearch">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="ev-q" type="text" placeholder="Filter ID, seal, description…" autocomplete="off">
+  </div>
 </div>
 
 <div class="card">
-  <div class="card-header">Evidence Items ({{ evidence|length }})</div>
-  <div class="table-wrap">
-    <table>
+  <div class="card-h"><span>Evidence Items</span><span class="count" id="ev-count">{{ evidence|length }} of {{ evidence|length }}</span></div>
+  <div class="tbl-wrap">
+    <table class="tbl" id="ev-tbl">
       <thead><tr>
-        <th>ID</th><th>Description</th><th>Category</th><th>Case</th>
-        <th>Condition</th><th>Custodian</th><th>Tamper Seal</th><th></th>
+        <th>Evidence ID</th><th>Tamper Seal</th><th>Category</th><th>Description</th><th>FIR</th><th>Custodian</th><th>Condition</th><th></th>
       </tr></thead>
       <tbody>
         {% for e in evidence %}
-        <tr>
-          <td class="mono">#{{ e['Evidence_ID'] }}</td>
-          <td style="max-width:200px">{{ e['Description'][:55] }}{% if e['Description']|length > 55 %}…{% endif %}</td>
-          <td><span class="cat-{{ e['Category']|lower }}" style="font-size:12px;font-weight:600">{{ e['Category'] }}</span></td>
-          <td><a href="{{ url_for('case_detail', case_id=e['Case_ID']) }}" class="mono">{{ e['FIR_Number'] }}</a></td>
-          <td>
-            {% set cond=e['Condition'] %}
-            {% if cond=='INTACT' %}<span class="badge badge-intact">INTACT</span>
-            {% elif cond=='DAMAGED' %}<span class="badge badge-damaged">DAMAGED</span>
-            {% else %}<span class="badge badge-cancelled">{{ cond }}</span>{% endif %}
+        <tr class="row-link" data-q="{{ (e['Evidence_ID']|string + ' ' + (e['Tamper_Seal'] or '') + ' ' + e['Description'])|lower }}" onclick="location.href='{{ url_for('evidence_detail', ev_id=e['Evidence_ID']) }}'">
+          <td><span class="mono" style="color:var(--text);font-size:13px">#{{ '%04d'|format(e['Evidence_ID']) }}</span></td>
+          <td><span class="mono" style="color:var(--seal)">{{ e['Tamper_Seal'] or '—' }}</span></td>
+          <td><span class="t-mono t-xs t-up" style="color:var(--accent)">{{ e['Category'] }}</span></td>
+          <td><div class="trunc" style="max-width:300px;color:var(--text)">{{ e['Description'] }}</div></td>
+          <td><a class="mono" href="{{ url_for('case_detail', case_id=e['Case_ID']) }}" style="color:var(--seal)">{{ e['FIR_Number'] }}</a></td>
+          <td><span class="off"><span class="av" style="background:#1f3a4a">{{ e['Custodian_Name'][:1] }}</span><span class="nm">{{ e['Custodian_Name'].split()[0] }}</span><span class="bd">· {{ e['Badge_Number'] }}</span></span></td>
+          <td>{% set cn=e['Condition'] %}
+            {% if cn=='INTACT' %}<span class="pill p-good"><span class="dot"></span>{{ cn }}</span>
+            {% elif cn=='DAMAGED' %}<span class="pill p-warn"><span class="dot"></span>{{ cn }}</span>
+            {% else %}<span class="pill p-bad"><span class="dot"></span>{{ cn }}</span>{% endif %}
           </td>
-          <td class="dim">{{ e['Custodian_Name'] }}<br><span class="mono">{{ e['Badge_Number'] }}</span></td>
-          <td><span class="seal">{{ e['Tamper_Seal'] }}</span></td>
-          <td><a href="{{ url_for('evidence_detail', ev_id=e['Evidence_ID']) }}">Chain →</a></td>
+          <td class="t-mono t-dimmer">→</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% if not evidence %}<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="m12 3 9 4-9 4-9-4 9-4Z"/></svg><div class="et">No evidence in this view</div><div class="es">Try a different category filter.</div></div>{% endif %}
 </div>
+
+<script>
+(()=>{
+  const tbl=document.getElementById("ev-tbl"); if(!tbl) return;
+  const rows=[...tbl.tBodies[0].rows], c=document.getElementById("ev-count"), n=rows.length;
+  document.getElementById("ev-q").oninput=(e)=>{ const q=e.target.value.toLowerCase().trim(); let m=0;
+    rows.forEach(r=>{ const ok=!q||r.dataset.q.includes(q); r.style.display=ok?"":"none"; if(ok)m++; });
+    c.textContent=`${m} of ${n}`;
+  };
+})();
+</script>
 
 {% endblock %}

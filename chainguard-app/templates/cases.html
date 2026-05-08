@@ -1,38 +1,72 @@
 {% extends 'base.html' %}
 {% block title %}— Cases{% endblock %}
-{% block page_title %}Cases{% endblock %}
+{% block crumb %}CASES{% endblock %}
 {% block content %}
 
+<div class="section-h">
+  <div>
+    <h1>Case Registry</h1>
+    <div class="sub">// {{ cases|length }} active records · sorted by date_reported DESC</div>
+  </div>
+</div>
+
+<div class="filters">
+  <span class="lbl">STATUS</span>
+  <button class="fchip on" data-f="status" data-v="">ALL</button>
+  <button class="fchip" data-f="status" data-v="OPEN">OPEN</button>
+  <button class="fchip" data-f="status" data-v="UNDER_INVESTIGATION">INVESTIGATING</button>
+  <button class="fchip" data-f="status" data-v="CLOSED">CLOSED</button>
+  <div class="fsearch">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="case-q" type="text" placeholder="Filter FIR or crime type…" autocomplete="off">
+  </div>
+</div>
+
 <div class="card">
-  <div class="card-header">All Cases ({{ cases|length }})</div>
-  <div class="table-wrap">
-    <table>
+  <div class="card-h"><span>Cases</span><span class="count" id="case-count">{{ cases|length }} of {{ cases|length }}</span></div>
+  <div class="tbl-wrap">
+    <table class="tbl" id="case-tbl">
       <thead><tr>
-        <th>Case ID</th><th>FIR Number</th><th>Crime Type</th><th>Date Reported</th>
-        <th>Status</th><th>Investigating Officer</th><th>Evidence</th><th></th>
+        <th>FIR</th><th>Crime Type</th><th>Status</th><th>Investigating Officer</th><th>Date Reported</th><th class="num">Evidence</th><th></th>
       </tr></thead>
       <tbody>
         {% for c in cases %}
-        <tr>
-          <td class="mono">#{{ c['Case_ID'] }}</td>
-          <td><span class="seal">{{ c['FIR_Number'] }}</span></td>
-          <td style="font-weight:500">{{ c['Crime_Type'] }}</td>
-          <td class="mono dim">{{ c['Date_Reported'] }}</td>
-          <td>
-            {% set s = c['Status'] %}
-            {% if s == 'OPEN' %}<span class="badge badge-open">OPEN</span>
-            {% elif s == 'CLOSED' %}<span class="badge badge-closed">CLOSED</span>
-            {% elif s == 'UNDER_INVESTIGATION' %}<span class="badge badge-investigation">INVESTIGATING</span>
-            {% else %}<span class="badge badge-archived">ARCHIVED</span>{% endif %}
+        <tr class="row-link" data-status="{{ c['Status'] }}" data-fir="{{ c['FIR_Number']|lower }}" data-crime="{{ c['Crime_Type']|lower }}" onclick="location.href='{{ url_for('case_detail', case_id=c['Case_ID']) }}'">
+          <td><span class="mono" style="color:var(--seal);font-size:13px">{{ c['FIR_Number'] }}</span><div class="t-dimmer t-xs t-mono" style="margin-top:2px">CASE_ID #{{ c['Case_ID'] }}</div></td>
+          <td>{{ c['Crime_Type'] }}</td>
+          <td>{% set s=c['Status'] %}
+            {% if s=='OPEN' %}<span class="pill p-good"><span class="dot"></span>OPEN</span>
+            {% elif s=='UNDER_INVESTIGATION' %}<span class="pill p-info"><span class="dot"></span>INVESTIGATING</span>
+            {% elif s=='CLOSED' %}<span class="pill p-mute"><span class="dot"></span>CLOSED</span>
+            {% else %}<span class="pill p-purple"><span class="dot"></span>{{ s }}</span>{% endif %}
           </td>
-          <td class="dim">{{ c['Officer_Name'] }}</td>
-          <td class="mono" style="color:var(--accent)">{{ c['Evidence_Count'] }}</td>
-          <td><a href="{{ url_for('case_detail', case_id=c['Case_ID']) }}">View →</a></td>
+          <td><span class="off"><span class="av" style="background:#1f3a4a">{{ c['Officer_Name'][:1] }}</span><span class="nm">{{ c['Officer_Name'] }}</span></span></td>
+          <td class="mono t-dim">{{ c['Date_Reported'] }}</td>
+          <td class="num"><span class="mono" style="color:var(--accent)">{{ '%03d'|format(c['Evidence_Count']) }}</span></td>
+          <td class="t-mono t-dimmer">→</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% if not cases %}<div class="empty"><div class="et">No cases on file</div></div>{% endif %}
 </div>
+
+<script>
+(()=>{
+  const tbl=document.getElementById("case-tbl"); if(!tbl) return;
+  const rows=[...tbl.tBodies[0].rows], counter=document.getElementById("case-count"), total=rows.length;
+  let f={status:"",q:""};
+  const apply=()=>{ let n=0; rows.forEach(r=>{
+    const ok = (!f.status||r.dataset.status===f.status) && (!f.q||r.dataset.fir.includes(f.q)||r.dataset.crime.includes(f.q));
+    r.style.display=ok?"":"none"; if(ok)n++;
+  }); counter.textContent=`${n} of ${total}`; };
+  document.querySelectorAll(".fchip[data-f=status]").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll(".fchip[data-f=status]").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on"); f.status=b.dataset.v; apply();
+  });
+  document.getElementById("case-q").oninput=(e)=>{ f.q=e.target.value.toLowerCase().trim(); apply(); };
+})();
+</script>
 
 {% endblock %}

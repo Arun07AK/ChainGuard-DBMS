@@ -1,38 +1,77 @@
 {% extends 'base.html' %}
 {% block title %}— Custody Chain{% endblock %}
-{% block page_title %}Custody Chain{% endblock %}
+{% block crumb %}CUSTODY{% endblock %}
 {% block content %}
 
+<div class="section-h">
+  <div>
+    <h1>Custody Chain Log</h1>
+    <div class="sub">// {{ transfers|length }} transfer records · ordered by TRANSFER_ID DESC</div>
+  </div>
+</div>
+
+<div class="filters">
+  <span class="lbl">STATUS</span>
+  <button class="fchip on" data-f="status" data-v="">ALL</button>
+  <button class="fchip" data-f="status" data-v="COMPLETED">COMPLETED</button>
+  <button class="fchip" data-f="status" data-v="PENDING">PENDING</button>
+  <button class="fchip" data-f="status" data-v="CANCELLED">CANCELLED</button>
+  <div class="fsearch">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="ct-q" type="text" placeholder="Filter evidence, FIR, officer…" autocomplete="off">
+  </div>
+</div>
+
 <div class="card">
-  <div class="card-header">All Custody Transfers ({{ transfers|length }})</div>
-  <div class="table-wrap">
-    <table>
+  <div class="card-h"><span>Transfer Ledger</span><span class="count" id="ct-count">{{ transfers|length }} of {{ transfers|length }}</span></div>
+  <div class="tbl-wrap">
+    <table class="tbl" id="ct-tbl">
       <thead><tr>
-        <th>#</th><th>Date</th><th>Evidence</th><th>Case</th>
-        <th>From</th><th>To</th><th>Reason</th><th>Status</th>
+        <th>XFER_ID</th><th>Date</th><th>Evidence</th><th>FIR</th><th>From → To</th><th>Reason</th><th>Status</th><th>Seal</th>
       </tr></thead>
       <tbody>
         {% for t in transfers %}
-        <tr>
-          <td class="mono dim">{{ t['Transfer_ID'] }}</td>
-          <td class="mono dim">{{ t['Transfer_Date'] }}</td>
+        <tr data-status="{{ t['Status'] }}" data-q="{{ (t['Evidence_ID']|string + ' ' + (t['Tamper_Seal'] or '') + ' ' + t['FIR_Number'] + ' ' + t['From_Off'] + ' ' + t['To_Off'] + ' ' + t['Reason'])|lower }}">
+          <td><span class="mono">#{{ '%05d'|format(t['Transfer_ID']) }}</span></td>
+          <td><span class="mono t-dim">{{ t['Transfer_Date'] }}</span></td>
           <td>
-            <a href="{{ url_for('evidence_detail', ev_id=t['Evidence_ID']) }}" class="seal">{{ t['Tamper_Seal'] }}</a>
-            <div class="dim" style="font-size:11px;margin-top:1px">{{ t['Evidence_Desc'][:40] }}{% if t['Evidence_Desc']|length > 40 %}…{% endif %}</div>
+            <a class="mono" href="{{ url_for('evidence_detail', ev_id=t['Evidence_ID']) }}" style="color:var(--text)">#{{ '%04d'|format(t['Evidence_ID']) }}</a>
+            <div class="t-dim t-xs trunc" style="max-width:200px;margin-top:2px">{{ t['Evidence_Desc'] }}</div>
           </td>
-          <td><span class="mono dim">{{ t['FIR_Number'] }}</span></td>
-          <td class="dim" style="font-size:12px">{{ t['From_Off'] }}</td>
-          <td style="font-size:12px;font-weight:500">{{ t['To_Off'] }}</td>
-          <td class="dim" style="font-size:11px;max-width:160px">{{ t['Reason'][:50] }}{% if t['Reason']|length > 50 %}…{% endif %}</td>
+          <td><span class="mono" style="color:var(--seal)">{{ t['FIR_Number'] }}</span></td>
           <td>
-            <span class="badge badge-{{ t['Status']|lower }}">{{ t['Status'] }}</span>
-            {% if t['Is_Sealed']=='Y' %}<span class="badge badge-sealed" style="margin-left:3px">⬡</span>{% endif %}
+            <div class="row gap-1 nowrap">
+              <span class="off"><span class="av" style="background:#3a4757">{{ t['From_Off'][:1] }}</span><span class="nm">{{ t['From_Off'].split()[0] }}</span></span>
+              <span class="arr">→</span>
+              <span class="off"><span class="av" style="background:#1f3a4a">{{ t['To_Off'][:1] }}</span><span class="nm">{{ t['To_Off'].split()[0] }}</span></span>
+            </div>
           </td>
+          <td><div class="trunc t-sm t-dim" style="max-width:220px">{{ t['Reason'] }}</div></td>
+          <td>{% set s=t['Status'] %}
+            {% if s=='COMPLETED' %}<span class="pill p-good"><span class="dot"></span>{{ s }}</span>
+            {% elif s=='PENDING' %}<span class="pill p-warn"><span class="dot"></span>{{ s }}</span>
+            {% else %}<span class="pill p-bad"><span class="dot"></span>{{ s }}</span>{% endif %}
+          </td>
+          <td>{% if t['Is_Sealed']=='Y' %}<span class="pill p-seal">SEALED</span>{% else %}<span class="t-dimmer t-mono t-xs">UNSEALED</span>{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% if not transfers %}<div class="empty"><div class="et">No transfer records</div></div>{% endif %}
 </div>
+
+<script>
+(()=>{
+  const tbl=document.getElementById("ct-tbl"); if(!tbl) return;
+  const rows=[...tbl.tBodies[0].rows], c=document.getElementById("ct-count"), n=rows.length;
+  let f={status:"",q:""};
+  const apply=()=>{ let m=0; rows.forEach(r=>{ const ok=(!f.status||r.dataset.status===f.status)&&(!f.q||r.dataset.q.includes(f.q)); r.style.display=ok?"":"none"; if(ok)m++; }); c.textContent=`${m} of ${n}`; };
+  document.querySelectorAll(".fchip[data-f=status]").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll(".fchip[data-f=status]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); f.status=b.dataset.v; apply();
+  });
+  document.getElementById("ct-q").oninput=(e)=>{ f.q=e.target.value.toLowerCase().trim(); apply(); };
+})();
+</script>
 
 {% endblock %}

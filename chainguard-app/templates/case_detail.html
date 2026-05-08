@@ -1,81 +1,97 @@
 {% extends 'base.html' %}
 {% block title %}— Case {{ case['FIR_Number'] }}{% endblock %}
-{% block page_title %}Case · {{ case['FIR_Number'] }}{% endblock %}
+{% block crumb %}CASES / {{ case['FIR_Number'] }}{% endblock %}
 {% block content %}
 
-<div class="grid-2" style="margin-bottom:16px">
+<div class="section-h">
+  <div>
+    <div class="row gap-3" style="align-items:baseline">
+      <span class="t-mono" style="color:var(--text-dim);font-size:11px;letter-spacing:.18em">CASE</span>
+      <span class="mono" style="font-size:22px;color:var(--seal);font-weight:600">{{ case['FIR_Number'] }}</span>
+      {% set s=case['Status'] %}
+      {% if s=='OPEN' %}<span class="pill p-good"><span class="dot"></span>OPEN</span>
+      {% elif s=='UNDER_INVESTIGATION' %}<span class="pill p-info"><span class="dot"></span>INVESTIGATING</span>
+      {% elif s=='CLOSED' %}<span class="pill p-mute"><span class="dot"></span>CLOSED</span>
+      {% else %}<span class="pill p-purple"><span class="dot"></span>{{ s }}</span>{% endif %}
+    </div>
+    <div class="sub" style="margin-top:8px;color:var(--text);font-family:var(--font-body);font-size:14px;letter-spacing:0;text-transform:none">{{ case['Crime_Type'] }} · reported {{ case['Date_Reported'] }}</div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('cases') }}">← Cases</a>
+    <button class="btn" onclick="window.print()">Print</button>
+  </div>
+</div>
+
+<div class="gr gr-2-1 mt">
   <div class="card">
-    <div class="card-header">Case Details</div>
-    <table style="font-size:13px">
-      <tr><td class="dim" style="padding:5px 0;width:140px">Case ID</td><td class="mono">#{{ case['Case_ID'] }}</td></tr>
-      <tr><td class="dim" style="padding:5px 0">FIR Number</td><td class="seal">{{ case['FIR_Number'] }}</td></tr>
-      <tr><td class="dim" style="padding:5px 0">Crime Type</td><td style="font-weight:600">{{ case['Crime_Type'] }}</td></tr>
-      <tr><td class="dim" style="padding:5px 0">Date Reported</td><td class="mono">{{ case['Date_Reported'] }}</td></tr>
-      <tr><td class="dim" style="padding:5px 0">Status</td>
-        <td>{% set s=case['Status'] %}
-          {% if s=='OPEN' %}<span class="badge badge-open">OPEN</span>
-          {% elif s=='CLOSED' %}<span class="badge badge-closed">CLOSED</span>
-          {% elif s=='UNDER_INVESTIGATION' %}<span class="badge badge-investigation">INVESTIGATING</span>
-          {% else %}<span class="badge badge-archived">ARCHIVED</span>{% endif %}
-        </td>
-      </tr>
-      <tr><td class="dim" style="padding:5px 0">Officer</td><td>{{ case['Officer_Name'] }}<br><span class="mono dim">{{ case['Badge_Number'] }} · {{ case['Department'] }}</span></td></tr>
-    </table>
-    {% if case['Description'] %}
-    <div style="margin-top:12px;padding:10px;background:var(--surface);border-radius:4px;font-size:12px;color:var(--muted);border-left:2px solid var(--border)">{{ case['Description'] }}</div>
-    {% endif %}
+    <div class="card-h"><span>Case File</span><span class="count">CASE_ID #{{ '%04d'|format(case['Case_ID']) }}</span></div>
+    <div class="card-b">
+      <div class="gr gr-2 gap-sm" style="row-gap:14px">
+        <div><div class="t-mono t-xs t-dimmer t-up">FIR Number</div><div class="mono" style="color:var(--seal);font-size:14px;margin-top:2px">{{ case['FIR_Number'] }}</div></div>
+        <div><div class="t-mono t-xs t-dimmer t-up">Crime Type</div><div style="font-size:14px;margin-top:2px">{{ case['Crime_Type'] }}</div></div>
+        <div><div class="t-mono t-xs t-dimmer t-up">Date Reported</div><div class="mono" style="margin-top:2px">{{ case['Date_Reported'] }}</div></div>
+        <div><div class="t-mono t-xs t-dimmer t-up">Status</div><div style="margin-top:2px">{{ case['Status'] }}</div></div>
+      </div>
+      <hr class="div">
+      <div class="t-mono t-xs t-dimmer t-up" style="margin-bottom:6px">Investigating Officer</div>
+      <span class="off"><span class="av" style="background:#1f3a4a">{{ case['Officer_Name'][:2]|upper }}</span><span class="nm">{{ case['Officer_Name'] }}</span><span class="bd">· {{ case['Badge_Number'] }} · {{ case['Department'] }}</span></span>
+      {% if case['Description'] %}
+      <hr class="div">
+      <div class="t-mono t-xs t-dimmer t-up" style="margin-bottom:6px">Brief</div>
+      <div style="font-size:13px;line-height:1.6;color:var(--text-mute)">{{ case['Description'] }}</div>
+      {% endif %}
+    </div>
   </div>
 
   <div class="card">
-    <div class="card-header">Evidence Summary</div>
+    <div class="card-h"><span>Evidence Summary</span><span class="count">{{ evidence|length }} item{{ 's' if evidence|length!=1 else '' }}</span></div>
+    <div class="card-b">
+      {% if evidence %}
+        {% set cats = evidence|groupby('Category') %}
+        <div class="col gap-2">
+          {% for cat, items in cats %}
+          <div class="row between" style="padding:6px 0;border-bottom:1px dashed var(--border)">
+            <span class="t-mono t-xs t-up" style="color:var(--text)">{{ cat }}</span>
+            <span class="mono" style="color:var(--text)">{{ items|list|length }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}<div class="empty"><div class="et">No evidence</div></div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card mt-lg">
+  <div class="card-h"><span>Evidence Items</span><span class="count">{{ evidence|length }}</span></div>
+  <div class="card-b">
     {% if evidence %}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      {% for cat, cnt in evidence|groupby('Category') %}
-      <div style="background:var(--surface);border-radius:4px;padding:8px 10px">
-        <div class="cat-{{ cat|lower }}" style="font-size:11px;font-weight:600;text-transform:uppercase">{{ cat }}</div>
-        <div style="font-size:20px;font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--text)">{{ cnt|list|length }}</div>
-      </div>
+    <div class="gr gr-3 gap-sm">
+      {% for e in evidence %}
+      <a href="{{ url_for('evidence_detail', ev_id=e['Evidence_ID']) }}" class="card" style="padding:14px;text-decoration:none;color:inherit;display:block;transition:.12s" onmouseover="this.style.borderColor='var(--border-hot)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div class="row between">
+          <span class="mono" style="color:var(--text)">#{{ '%04d'|format(e['Evidence_ID']) }}</span>
+          <span class="pill p-seal">{{ e['Tamper_Seal'] }}</span>
+        </div>
+        <div class="row gap-2" style="margin-top:8px">
+          <span class="t-mono t-xs t-up" style="color:var(--accent)">{{ e['Category'] }}</span>
+          {% set cn=e['Condition'] %}
+          {% if cn=='INTACT' %}<span class="pill p-good"><span class="dot"></span>{{ cn }}</span>
+          {% elif cn=='DAMAGED' %}<span class="pill p-warn"><span class="dot"></span>{{ cn }}</span>
+          {% else %}<span class="pill p-bad"><span class="dot"></span>{{ cn }}</span>{% endif %}
+        </div>
+        <div class="trunc-2" style="margin-top:8px;font-size:12.5px;color:var(--text);line-height:1.5;min-height:36px">{{ e['Description'] }}</div>
+        <hr class="div" style="margin:10px 0">
+        <div class="row gap-2" style="font-size:11px;color:var(--text-dim)">
+          <span class="off"><span class="av" style="background:#3a4757">{{ e['Custodian_Name'][:1] }}</span><span class="nm">{{ e['Custodian_Name'].split()[0] }}</span></span>
+          {% if e['Facility_Name'] %}<span class="chip">📍 {{ e['Facility_Name'][:14] }}</span>{% endif %}
+        </div>
+      </a>
       {% endfor %}
     </div>
     {% else %}
-    <div class="dim">No evidence registered.</div>
+    <div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="m12 3 9 4-9 4-9-4 9-4Z"/></svg><div class="et">No evidence registered</div><div class="es">No items have been logged against this FIR yet.</div></div>
     {% endif %}
   </div>
-</div>
-
-<div class="card">
-  <div class="card-header">Evidence Items ({{ evidence|length }})</div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr>
-        <th>ID</th><th>Description</th><th>Category</th><th>Condition</th>
-        <th>Date Collected</th><th>Custodian</th><th>Tamper Seal</th><th></th>
-      </tr></thead>
-      <tbody>
-        {% for e in evidence %}
-        <tr>
-          <td class="mono">#{{ e['Evidence_ID'] }}</td>
-          <td>{{ e['Description'][:50] }}{% if e['Description']|length > 50 %}…{% endif %}</td>
-          <td><span class="cat-{{ e['Category']|lower }}" style="font-size:12px;font-weight:600">{{ e['Category'] }}</span></td>
-          <td>
-            {% set cond=e['Condition'] %}
-            {% if cond=='INTACT' %}<span class="badge badge-intact">INTACT</span>
-            {% elif cond=='DAMAGED' %}<span class="badge badge-damaged">DAMAGED</span>
-            {% else %}<span class="badge badge-cancelled">{{ cond }}</span>{% endif %}
-          </td>
-          <td class="mono dim">{{ e['Date_Collected'] }}</td>
-          <td class="dim">{{ e['Custodian_Name'] }}</td>
-          <td><span class="seal">{{ e['Tamper_Seal'] }}</span></td>
-          <td><a href="{{ url_for('evidence_detail', ev_id=e['Evidence_ID']) }}">Chain →</a></td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div style="margin-top:12px">
-  <a href="{{ url_for('cases') }}" style="color:var(--muted);font-size:13px">← Back to Cases</a>
 </div>
 
 {% endblock %}
