@@ -4,7 +4,10 @@ Run once: python init_db.py
 """
 import sqlite3, os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'chainguard.db')
+DB_PATH = os.environ.get(
+    'CHAINGUARD_DB_PATH',
+    os.path.join(os.path.dirname(__file__), 'chainguard.db'),
+)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS Officers (
@@ -175,6 +178,9 @@ INSERT INTO Audit_Log VALUES (4,'CUSTODY_TRANSFERS','UPDATE',1,NULL,'2025-01-16 
 """
 
 def init():
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     if os.path.exists(DB_PATH):
         os.remove(DB_PATH)
         print(f"Removed existing DB.")

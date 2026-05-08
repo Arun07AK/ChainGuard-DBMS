@@ -6,8 +6,16 @@ from flask import Flask, render_template, request, redirect, url_for, flash, g
 import sqlite3, os
 
 app = Flask(__name__)
-app.secret_key = 'chainguard-secret-2025'
-DB_PATH = os.path.join(os.path.dirname(__file__), 'chainguard.db')
+app.secret_key = os.environ.get('SECRET_KEY', 'chainguard-secret-2025')
+DB_PATH = os.environ.get(
+    'CHAINGUARD_DB_PATH',
+    os.path.join(os.path.dirname(__file__), 'chainguard.db'),
+)
+os.makedirs(os.path.dirname(DB_PATH) or '.', exist_ok=True)
+if not os.path.exists(DB_PATH):
+    import init_db
+    init_db.DB_PATH = DB_PATH
+    init_db.init()
 
 def get_db():
     if 'db' not in g:
@@ -261,7 +269,4 @@ def audit():
     return render_template('audit.html', logs=rows)
 
 if __name__ == '__main__':
-    if not os.path.exists(DB_PATH):
-        import init_db
-        init_db.init()
-    app.run(debug=True, port=5050)
+    app.run(debug=True, port=int(os.environ.get('PORT', 5050)), host='0.0.0.0')
